@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -25,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import java.util.UUID
@@ -167,6 +169,7 @@ fun ConnectDialog(session: SshService, dismiss: () -> Unit, connect: (Connection
 					},
 					label = { Text("Key passphrase") },
 					singleLine = true,
+					keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
 					visualTransformation = PasswordVisualTransformation()
 				)
 			} else {
@@ -175,6 +178,7 @@ fun ConnectDialog(session: SshService, dismiss: () -> Unit, connect: (Connection
 					{ password = it },
 					label = { Text("Password") },
 					singleLine = true,
+					keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
 					visualTransformation = PasswordVisualTransformation()
 				)
 			}
