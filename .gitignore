@@ -25,3 +25,10 @@ AGENTS.override.md
 # Local Plan
 /plan.md
 
+# Android toolchains and build outputs
+/.tools/
+/android/.gradle/
+/android/.kotlin/
+/android/**/build/
+/android/local.properties
+/android/**/.cxx/
