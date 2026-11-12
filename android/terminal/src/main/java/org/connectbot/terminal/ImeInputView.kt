@@ -173,11 +173,12 @@ internal class ImeInputView(
         outAttrs.imeOptions = outAttrs.imeOptions or
             EditorInfo.IME_FLAG_NO_EXTRACT_UI or
             EditorInfo.IME_FLAG_NO_ENTER_ACTION or
+            EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
             EditorInfo.IME_ACTION_NONE
 
-        val useFullEditor = isComposeModeActive && shortcutInputMode != ImeShortcutInputMode.TYPE_NULL
+        val useFullEditor = shortcutInputMode != ImeShortcutInputMode.TYPE_NULL
         if (useFullEditor) {
-            // Compose mode: allow voice input and IME suggestions.
+            // Full text input supports local composition and voice input.
             // TYPE_CLASS_TEXT without NO_SUGGESTIONS keeps the suggestion strip (and its
             // microphone button) visible. fullEditor=true makes BaseInputConnection provide
             // a real Editable so getExtractedText() returns non-null (required by Gboard
@@ -189,7 +190,7 @@ internal class ImeInputView(
             outAttrs.initialSelStart = 0
             outAttrs.initialSelEnd = 0
         } else {
-            // Normal terminal mode:
+            // Explicit raw shortcut mode:
             // - TYPE_TEXT_VARIATION_PASSWORD: Shows password-style keyboard with number rows
             // - TYPE_TEXT_VARIATION_VISIBLE_PASSWORD: Keeps text visible (we handle display ourselves)
             // - TYPE_TEXT_FLAG_NO_SUGGESTIONS: Disables autocomplete/suggestions
@@ -405,6 +406,11 @@ internal class ImeInputView(
             }
             super.setComposingText(text, newCursorPosition)
             scheduleSelectionUpdate()
+            // Normal composition stays in the local `Editable` until confirmation.
+            if (!isComposeModeActive) {
+                composingText = newText
+                return true
+            }
 
             if (newText == composingText) {
                 return true
@@ -447,6 +453,10 @@ internal class ImeInputView(
         override fun finishComposingText(): Boolean {
             if (!fullEditor) return super.finishComposingText()
 
+            if (!isComposeModeActive) {
+                val current = editable?.toString().orEmpty()
+                if (current != committedContext) replaceCommittedContext(committedContext, current)
+            }
             super.finishComposingText()
             composingText = ""
             trimEditableContext()
@@ -457,6 +467,35 @@ internal class ImeInputView(
         }
 
         override fun deleteSurroundingText(leftLength: Int, rightLength: Int): Boolean {
+            if (fullEditor && !isComposeModeActive && composingText.isNotEmpty() &&
+                leftLength == 0 && rightLength == 0
+            ) {
+                val end = composingText.offsetByCodePoints(composingText.length, -1)
+                return setComposingText(composingText.substring(0, end), 1)
+            }
+            val localBuffer = editable
+            if (fullEditor && !isComposeModeActive && localBuffer != null && localBuffer.isNotEmpty() &&
+                (leftLength != 0 || rightLength != 0)
+            ) {
+                val previous = committedContext
+                val composing = BaseInputConnection.getComposingSpanStart(localBuffer) >= 0
+                super.deleteSurroundingText(
+                    leftLength.coerceIn(0, MAX_DELETE_SURROUNDING),
+                    rightLength.coerceIn(0, MAX_DELETE_SURROUNDING),
+                )
+                if (composing) {
+                    val start = BaseInputConnection.getComposingSpanStart(localBuffer)
+                    val end = BaseInputConnection.getComposingSpanEnd(localBuffer)
+                    composingText = if (start >= 0 && end >= start) localBuffer.substring(start, end) else ""
+                } else {
+                    val current = editable?.toString().orEmpty()
+                    if (previous != current) replaceCommittedContext(previous, current)
+                    committedContext = current
+                    committedContextConfirmed = false
+                }
+                scheduleSelectionUpdate()
+                return true
+            }
             // Handle backspace by sending DEL key events
             // When IME sends delete, it often sends (0, 0) or (1, 0) for backspace
             if (rightLength == 0 && leftLength == 0) {
@@ -490,6 +529,10 @@ internal class ImeInputView(
                     composingText.takeIf { it.isNotEmpty() }
                 } else {
                     null
+                }
+
+                if (!isComposeModeActive && isKeyDown && event.keyCode == KeyEvent.KEYCODE_ENTER) {
+                    finishComposingText()
                 }
 
                 // Compose mode (TYPE_CLASS_TEXT): route through dispatchKeyEvent so the
@@ -548,11 +591,11 @@ internal class ImeInputView(
                 return true
             }
 
-            val previousEditable = editable?.toString().orEmpty()
+            val previousEditable = if (isComposeModeActive) editable?.toString().orEmpty() else committedContext
             val committedEdit = committedEditableText(committedText, newCursorPosition)
             val retainCommittedContext = !keyboardHandler.hasTerminalShortcutModifiers()
             // Save the projected composition before committing it into the editable context.
-            val previousComposingText = composingText
+            val previousComposingText = if (isComposeModeActive) composingText else ""
 
             if (awaitingPostEnterCommitReplay &&
                 postEnterSubmittedText != null &&
@@ -619,8 +662,9 @@ internal class ImeInputView(
                 text.toString(),
                 newCursorPosition,
             )
-            if (previousEditable != replacement.first) {
-                replaceCommittedContext(previousEditable, replacement.first)
+            val previousCommitted = if (isComposeModeActive) previousEditable else committedContext
+            if (previousCommitted != replacement.first) {
+                replaceCommittedContext(previousCommitted, replacement.first)
             }
             composingText = ""
             applyCommittedEditableText(replacement)
