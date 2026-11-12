@@ -86,9 +86,8 @@ fun ConnectDialog(session: SshService, dismiss: () -> Unit, connect: (Connection
 			runOperation {
 				privateKey = withContext(Dispatchers.IO) {
 					val bytes = context.contentResolver.openInputStream(uri)!!.use {
-						it.readNBytes(1024 * 1024 + 1)
+						it.readBounded(1024 * 1024)
 					}
-					require(bytes.size <= 1024 * 1024) { "Key file is too large" }
 					bytes.toString(Charsets.UTF_8).also {
 						require(it.contains("PRIVATE KEY")) { "Select a private key file" }
 					}
