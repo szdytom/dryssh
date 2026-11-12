@@ -1,6 +1,7 @@
 package dev.dryssh
 
 import android.Manifest
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -46,12 +47,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
+import org.connectbot.terminal.ScrollController
+import org.connectbot.terminal.SelectionController
 import org.connectbot.terminal.Terminal
 import org.connectbot.terminal.VTermKey
 import org.json.JSONObject
@@ -111,6 +116,11 @@ private fun SessionScreen(
 	val hardwareKeyboard = configuration.keyboard != Configuration.KEYBOARD_NOKEYS &&
 		configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
 	var keyboard by remember(hardwareKeyboard) { mutableStateOf(!hardwareKeyboard) }
+	var showMenu by remember { mutableStateOf(false) }
+	var localHistory by remember { mutableStateOf(false) }
+	var selection by remember { mutableStateOf<SelectionController?>(null) }
+	var scroll by remember { mutableStateOf<ScrollController?>(null) }
+	val context = LocalContext.current
 	var showConnect by remember { mutableStateOf(false) }
 	var showSettings by remember { mutableStateOf(false) }
 	val config by session.repository.config.collectAsState()
@@ -136,7 +146,36 @@ private fun SessionScreen(
 		view.keepScreenOn = state.state == "connected" && stayAwake
 		onDispose { view.keepScreenOn = false }
 	}
-	BackHandler { background() }
+	fun pasteClipboard() {
+		val text =
+			context.getSystemService(ClipboardManager::class.java).primaryClip?.let {
+				if (it.itemCount >
+					0
+				) {
+					it.getItemAt(0).coerceToText(context).toString()
+				} else {
+					""
+				}
+			}
+				?: return
+		if (text.any { it == '\n' || it == '\r' } && !session.terminal.bracketedPasteEnabled) {
+			session.updateDraft(text)
+			showEditor = true
+		} else {
+			session.terminal.pasteText(text)
+		}
+	}
+	BackHandler {
+		when {
+			localHistory -> {
+				localHistory = false
+				scroll?.scrollToBottom()
+				selection?.clearSelection()
+			}
+			selection?.isSelectionActive == true -> selection?.clearSelection()
+			else -> background()
+		}
+	}
 	Surface(Modifier.fillMaxSize()) {
 		Column(Modifier.safeDrawingPadding()) {
 			Row(
@@ -157,7 +196,12 @@ private fun SessionScreen(
 			}
 			Terminal(
 				terminalEmulator = session.terminal,
-				modifier = Modifier.weight(1f).fillMaxWidth(),
+				modifier = Modifier.weight(1f).fillMaxWidth().testTag("terminal"),
+				onTerminalLongPress = { showMenu = true },
+				localHistory = localHistory,
+				onSelectionControllerAvailable = { selection = it },
+				onScrollControllerAvailable = { scroll = it },
+				onPasteRequest = ::pasteClipboard,
 				keyboardEnabled = true,
 				showSoftKeyboard = keyboard,
 				initialFontSize = settings.getDouble("font_size").toFloat().sp,
@@ -167,7 +211,7 @@ private fun SessionScreen(
 				foregroundColor = Color(settings.getLong("foreground").toInt()),
 				onInterceptKey = { event ->
 					val action = TerminalActions.matches(event.nativeKeyEvent, settings.getJSONArray("bindings"))
-					if (action != null && !showEditor && !showConnect && !showSettings) {
+					if (action != null && !showEditor && !showConnect && !showSettings && !showMenu) {
 						if (event.nativeKeyEvent.action ==
 							KeyEvent.ACTION_DOWN
 						) {
@@ -179,6 +223,13 @@ private fun SessionScreen(
 					}
 				}
 			)
+			if (localHistory) {
+				TextButton(onClick = {
+					localHistory = false
+					scroll?.scrollToBottom()
+					selection?.clearSelection()
+				}) { Text("Return to live terminal") }
+			}
 			if (fontResult.isFailure) {
 				Text(
 					"Cannot load imported font. Select another font in Settings.",
@@ -221,6 +272,41 @@ private fun SessionScreen(
 				}) { Text(if (stayAwake) "Stay awake" else "Allow sleep") }
 			}
 		}
+	}
+	if (showMenu) {
+		AlertDialog(onDismissRequest = { showMenu = false }, title = { Text("Terminal menu") }, text = {
+			Column {
+				TextButton(
+					onClick = {
+						selection?.copySelection()
+						showMenu = false
+					},
+					enabled =
+					selection?.isSelectionActive == true
+				) { Text("Copy selection") }
+				TextButton(onClick = {
+					pasteClipboard()
+					showMenu = false
+				}, enabled = state.state == "connected") { Text("Paste clipboard") }
+				TextButton(onClick = {
+					selection?.startSelection()
+					showMenu = false
+				}) { Text("Select text") }
+				TextButton(onClick = {
+					selection?.selectAll()
+					showMenu = false
+				}) { Text("Select all") }
+				TextButton(onClick = {
+					localHistory = true
+					scroll?.scrollToTop()
+					showMenu = false
+				}) { Text("Local history") }
+				TextButton(onClick = {
+					showEditor = true
+					showMenu = false
+				}) { Text("Open local editor") }
+			}
+		}, confirmButton = { TextButton(onClick = { showMenu = false }) { Text("Close") } })
 	}
 	if (showSettings) SettingsDialog(session.repository) { showSettings = false }
 	if (showEditor) EditorDialog(session) { showEditor = false }
