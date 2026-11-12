@@ -7,3 +7,11 @@ license.workspace = true
 
 [dev-dependencies]
 proptest = "=1.11.0"
+rand = "0.10.3"
+
+[dependencies]
+russh = { version = "=0.65.1", default-features = false, features = ["ring", "rsa"] }
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros"] }
+tokio-util = { version = "0.7.20", features = ["rt"] }
