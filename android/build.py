@@ -31,6 +31,8 @@ def main():
             continue
         linker = tools / f"{target}30-clang"
         env[f"CARGO_TARGET_{target.upper().replace('-', '_')}_LINKER"] = str(linker)
+        env[f"CC_{target.replace('-', '_')}"] = str(linker)
+        env[f"AR_{target.replace('-', '_')}"] = str(tools / "llvm-ar")
         command = ["cargo", "build", "--locked", "-p", "dryssh-android-bridge", "--target", target]
         if args.release:
             command.append("--release")

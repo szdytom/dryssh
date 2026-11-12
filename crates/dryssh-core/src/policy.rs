@@ -1,12 +1,14 @@
 //! Connection intent survives UI changes; transport attempts have distinct generations.
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Network {
 	pub online: bool,
 	pub wlan: bool,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Options {
 	pub auto_reconnect: bool,
 	pub wlan_only: bool,
@@ -21,7 +23,8 @@ impl Default for Options {
 	}
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum State {
 	Idle,
 	WaitingNetwork,
@@ -33,14 +36,16 @@ pub enum State {
 	HostKeyFailed,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Failure {
 	Network,
 	Authentication,
 	HostKey,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "data", rename_all = "snake_case")]
 pub enum Event {
 	Connect(Options),
 	Disconnect,
@@ -50,14 +55,15 @@ pub enum Event {
 	Retry(u64),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Effect {
 	CloseTransport,
 	Connect { generation: u64, wlan_only: bool },
 	ScheduleRetry { generation: u64 },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Policy {
 	state: State,
 	generation: u64,
