@@ -2,9 +2,10 @@
 
 A terminal-first Android SSH client, optimized for an external keyboard.
 
-This is under active development. The initial terminal/bootstrap is not yet a
-usable SSH client. See [delivery status](docs/progress.md) for verified features
-and outstanding daily-use requirements.
+This is under active development. Password SSH, host-key trust, automatic
+reconnect, strict WLAN transport and foreground sessions are implemented.
+Profiles, persistent credentials and the remaining daily-use tools are still
+being built. See [delivery status](docs/progress.md) for acceptance evidence.
 
 ## Build
 
@@ -48,3 +49,27 @@ The app's standard logs and crashes are available through
 `adb logcat -s AndroidRuntime DrySSH`. Terminal output and credentials must not
 be included in application logs. Phone-specific HarmonyOS/卓易通 installation,
 keyboard, IME and routing verification will be performed by the user.
+
+## Emulator SSH fixture
+
+The fixture contains OpenSSH, tmux, git and nvim, with the local test account
+`dryssh` / `dryssh-test`. Keep the published port on loopback:
+
+```sh
+podman build --network host -t localhost/dryssh-fixture android/fixture
+podman run -d --name dryssh-fixture -p 127.0.0.1:22222:22 localhost/dryssh-fixture
+adb shell svc wifi enable
+adb shell cmd wifi connect-network AndroidWifi open
+python3 android/test.py --ssh-host 10.0.2.2 --ssh-dns-host 10.0.2.2.nip.io
+```
+
+The route case requires both emulator WLAN and cellular networks. It forces
+the **test process** default onto cellular, verifies its actual socket source
+address, then connects to the same SSH server through the reserved WLAN network
+and network-specific DNS. Application code never binds the whole process.
+The `nip.io` name is only a test DNS convenience, not an app dependency.
+
+`--skip-build` uses existing APKs. `--class dev.dryssh.NetworkAccessTest` selects
+a case. Tests with no SSH fixture argument skip SSH scenarios; the harness
+rejects any skipped case when `--ssh-host` is supplied. Reports, logcat and a
+screenshot are retained under `artifacts/android/<serial>/`.

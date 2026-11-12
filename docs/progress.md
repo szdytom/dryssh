@@ -1,7 +1,7 @@
 # Delivery status
 
 Scope: `plan.md` sections 2–6, with **Android emulator acceptance** authorized by
-the user on 2026-11-13. Hardware/HarmonyOS NEXT verification remains withthe user.
+the user on 2026-11-13. Hardware/HarmonyOS NEXT verification remains with the user.
 A terminal demo is only M0; it does not satisfy the daily-use release requirements.
 
 ## Milestones
@@ -9,8 +9,8 @@ A terminal demo is only M0; it does not satisfy the daily-use release requiremen
 | Stage | Current evidence | Remaining |
 | --- | --- | --- |
 | M0 | APK installs and launches on API 35 x86_64; 5 device tests pass; ASCII and Chinese rendered; lint has no errors; build documented | Final ARM64 packaging, phone verification by user |
-| M1 | Not implemented | SSH transport, trust, auth, PTY, I/O, resizing, keyboard |
-| M2 | Native terminal integration tests written, not yet run | IME, paste in tmux, service lifecycle, 30-minute background and lock, WLAN binding, secure persistence |
+| M1 | Rust SSH driver and policy tests pass; Android/OpenSSH password login, host trust, PTY resize and I/O pass; original shell PID survives recreation, rotation and a short background interval with reconnect disabled | Broader tmux/Codex/git/nvim keyboard workflows |
+| M2 | Native paste negotiation, UTF-8, Ctrl/Alt, OSC 52 and dimensions pass on device; foreground-service lifecycle tested end to end | IME, paste in tmux, 30-minute background and lock, WLAN route/loss acceptance, secure persistence |
 | M3 | Not implemented | Profiles, credentials, reconnect, settings, editor, touch, clipboard, notification |
 | M4 | Not started | Full workflow acceptance and regression fixes |
 
@@ -25,3 +25,19 @@ A terminal demo is only M0; it does not satisfy the daily-use release requiremen
   A compact session/status row keeps terminal cells available on a phone.
 - JDK 21, Gradle 9.9.1 (distribution SHA-256 verified by wrapper), AGP 9.4.1,
   Kotlin Compose plugin 2.4.21, Compose BOM 2026.09.00, NDK 29.0.14206865.
+
+## Verification evidence
+
+- API 35 AOSP x86_64 phone emulator, 2026-11-13: 11 instrumented tests passed,
+  no skips, against the local OpenSSH 9.6 fixture. Report:
+  `artifacts/android/emulator-5554/integration.txt` (generated, not tracked).
+- The lifecycle case disables auto-reconnect and compares newly printed remote
+  shell PIDs before/after recreation, landscape rotation and two seconds in the
+  background. This is **not** the required 30-minute acceptance.
+- Host SSH integration covers encrypted/unencrypted Ed25519 import, password
+  rejection, changed/rejected host keys before authentication, resize, UTF-8,
+  dropping pre-authentication input and cancellation during host-key approval.
+- Strict WLAN socket/DNS route acceptance passed against the fixture using
+  `10.0.2.2.nip.io`: a process-default cellular socket used `10.0.2.15`, while
+  the explicit WLAN socket used `10.0.2.16`; both received OpenSSH banners.
+  Network-loss/recovery acceptance remains pending.
