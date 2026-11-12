@@ -148,17 +148,22 @@ fn valid_key(key: &str) -> bool {
 		|| matches!(
 			key,
 			"space"
-				| "escape" | "tab"
-				| "enter" | "backspace"
-				| "delete" | "insert"
-				| "home" | "end"
-				| "up" | "down"
-				| "left" | "right"
-				| "page_up" | "page_down"
-		) || key
-		.strip_prefix('f')
-		.and_then(|f| f.parse::<u8>().ok())
-		.is_some_and(|f| (1..=12).contains(&f))
+				| "escape"
+				| "tab"
+				| "enter"
+				| "backspace"
+				| "delete"
+				| "insert"
+				| "home"
+				| "end"
+				| "up"
+				| "down"
+				| "left"
+				| "right"
+				| "page_up"
+				| "page_down"
+		)
+		|| (1..=12).any(|number| key == format!("f{number}"))
 }
 
 impl Action {
@@ -240,6 +245,15 @@ mod tests {
 		let mut config = config;
 		config.settings.font_ref = Some("../font".into());
 		assert!(config.validate().is_err());
+	}
+
+	#[test]
+	fn function_keys_use_portable_canonical_names() {
+		assert!(valid_key("f1"));
+		assert!(valid_key("f12"));
+		for key in ["f0", "f13", "f01", "F1"] {
+			assert!(!valid_key(key));
+		}
 	}
 
 	#[test]
