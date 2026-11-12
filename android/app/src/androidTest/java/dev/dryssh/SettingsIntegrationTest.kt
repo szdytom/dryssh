@@ -54,6 +54,7 @@ class SettingsIntegrationTest {
 				fill("ANSI 1", "BBAACC")
 				compose.onNodeWithText("Save settings").assertIsDisplayed()
 				compose.onNodeWithText("Keys").assertIsDisplayed()
+				compose.onNodeWithText("Appearance").performClick()
 				val instrumentation = InstrumentationRegistry.getInstrumentation()
 				val monitor = instrumentation.addMonitor(
 					IntentFilter(Intent.ACTION_GET_CONTENT).apply {

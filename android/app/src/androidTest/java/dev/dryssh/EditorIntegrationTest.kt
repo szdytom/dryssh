@@ -57,7 +57,7 @@ class EditorIntegrationTest {
 		ActivityScenario.launch(MainActivity::class.java).use { activity ->
 			compose.waitUntil(5_000) {
 				compose.onAllNodes(
-					androidx.compose.ui.test.hasText("Editor")
+					androidx.compose.ui.test.hasContentDescription("Editor")
 				).fetchSemanticsNodes().isNotEmpty()
 			}
 			compose.onNodeWithContentDescription("Editor").performClick()

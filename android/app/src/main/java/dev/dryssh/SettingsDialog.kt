@@ -32,6 +32,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -46,6 +48,8 @@ import org.json.JSONObject
 @Composable
 fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 	val context = LocalContext.current
+	val focus = LocalFocusManager.current
+	val keyboard = LocalSoftwareKeyboardController.current
 	val scope = rememberCoroutineScope()
 	var settings by remember {
 		mutableStateOf(JSONObject(repository.config.value).getJSONObject("settings").toString())
@@ -118,8 +122,10 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 			Row {
 				listOf("Appearance", "Keys", "Actions").forEach { title ->
 					TextButton(onClick = {
-						page =
-							title
+						focus.clearFocus()
+						keyboard?.hide()
+						colorValidity.clear()
+						page = title
 					}) { Text(title) }
 				}
 			}
