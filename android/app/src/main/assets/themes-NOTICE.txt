@@ -1,0 +1,951 @@
+Alacritty Theme — https://github.com/alacritty/alacritty-theme/tree/95615789c5eddee1c5407a520cd9959a86fa4716
+Modified for DrySSH: primary foreground/background and 16 ANSI colors only.
+Missing ANSI entries use Alacritty defaults; other color tables are omitted.
+Original theme comments follow, including attribution and source links.
+
+12-bit_rainbow.toml
+# Colors (12-bit_rainbow)
+# Source: https://iamkate.com/data/12-bit-rainbow/
+
+Cobalt2.toml
+# From the famous Cobalt2 sublime theme
+# Source  https//github.com/wesbos/cobalt2/tree/master/Cobalt2
+# Default colors
+# Normal colors
+# Bright colors
+
+Mariana.toml
+# Mariana (ported from Sublime Text 4)
+# Source https//github.com/mbadolato/iTerm2-Color-Schemes/blob/master/alacritty/Mariana.yml
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+# Selection colors
+
+acme.toml
+# Colors (acme)
+# Default colors
+# Normal colors
+# Bright colors
+
+afterglow.toml
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+alabaster.toml
+# Colors (Alabaster)
+# author tonsky
+
+alabaster_dark.toml
+# Colors (Alabaster Dark)
+# author tonsky
+
+alacritty_0_12.toml
+# Alacritty's default color scheme pre-0.13 (based on tomorrow_night)
+# https://github.com/alacritty/alacritty/blob/v0.12.3/alacritty/src/config/color.rs
+
+andromeda.toml
+# Andromeda
+
+argonaut.toml
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+ashes_dark.toml
+
+ashes_light.toml
+
+aura.toml
+
+autumn.toml
+# From: https://github.com/yorickpeterse/Autumn.vim/blob/master/colors/autumn.vim
+
+ayu_dark.toml
+# Colors (Ayu Dark)
+# Default colors
+# Normal colors
+# Bright colors
+
+ayu_light.toml
+# Colors (Ayu Light)
+# Default colors - taken from ayu-colors
+# Normal colors - taken from ayu-iTerm
+# Bright colors - pastel lighten 0.1 <normal> except black lighten with 0.2
+
+ayu_mirage.toml
+# Colors (Ayu Mirage)
+# Default Colors
+# Normal colors
+# Bright colors
+
+azu.toml
+
+baitong.toml
+# Colors (Baitong)
+# Normal colors
+# Bright colors
+
+base16_default_dark.toml
+# Colors (Base16 Default Dark)
+# Default colors
+# Normal colors
+# Bright colors
+
+blood_moon.toml
+# Colors (Blood Moon)
+# Default colors
+# Normal colors
+# Bright colors
+
+bluish.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+breeze.toml
+# KDE Breeze (Ported from Konsole)
+# Default colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+campbell.toml
+# Campbell (Windows 10 default)
+# Default colors
+# Normal colors
+# Bright colors
+
+carbonfox.toml
+# Nightfox Alacritty Colors
+## name: carbonfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/carbonfox/alacritty.toml
+
+catppuccin.toml
+# Catppuccino theme scheme for Alacritty
+
+catppuccin_frappe.toml
+# Default colors
+# Bright and dim foreground colors
+# Cursor colors
+# Search colors
+# Keyboard regex hints
+# Selection colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+catppuccin_latte.toml
+# Default colors
+# Bright and dim foreground colors
+# Cursor colors
+# Search colors
+# Keyboard regex hints
+# Selection colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+catppuccin_macchiato.toml
+# Default colors
+# Bright and dim foreground colors
+# Cursor colors
+# Search colors
+# Keyboard regex hints
+# Selection colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+catppuccin_mocha.toml
+# Bright and dim foreground colors
+# Cursor colors
+# Search colors
+# Keyboard regex hints
+# Selection colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+challenger_deep.toml
+# Colors (Challenger Deep)
+# Default colors
+# Normal colors
+# Bright colors
+
+chicago95.toml
+# Windows 95 Color Scheme
+# To have the authentic experience in Chicago95 GTK Theme.
+# Default colors
+# Normal colors
+# Bright colors
+
+citylights.toml
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+cyber_punk_neon.toml
+# Cyber Punk Neon
+# Source https//github.com/Roboron3042/Cyberpunk-Neon
+# Default colors
+# Normal colors
+# Bright colors
+
+dark_pastels.toml
+# Colors (Konsole's Dark Pastels)
+# Default colors
+# Normal colors
+# Bright colors
+
+dark_plus.toml
+
+dark_pride.toml
+# Dark Pride
+# A dark trans pride colour inspired theme
+# Primary colors
+# Colors used for 'custom_cursor_colors'
+# Colors 0 through 7
+# Colors 8 through 15
+
+dawnfox.toml
+# Nightfox Alacritty Colors
+## name: dawnfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/dawnfox/alacritty.toml
+
+dayfox.toml
+# Nightfox Alacritty Colors
+## name: dayfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/dayfox/alacritty.toml
+
+deep_space.toml
+# Source https//github.com/tyrannicaltoucan/vim-deep-space
+# Default colors
+# Colors the cursor will use if `custom_cursor_colors` is true
+# Normal colors
+# Bright colors
+
+doom_one.toml
+# Colors (Doom One)
+# Default colors
+# Normal colors
+
+dracula.toml
+# Colors (Dracula)
+# Default colors
+# Normal colors
+# Bright colors
+
+dracula_plus.toml
+# Colors (Dracula+)
+
+duskfox.toml
+# Nightfox Alacritty Colors
+## name: duskfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/duskfox/alacritty.toml
+
+enfocado_dark.toml
+# Theme: enfocado_dark
+# Source:  https://github.com/wuelnerdotexe/vim-enfocado
+# Default colors
+# Normal colors
+# Bright colors
+
+enfocado_light.toml
+# Theme: enfocado_light
+# Source:  https://github.com/wuelnerdotexe/vim-enfocado
+# Default colors
+# Normal colors
+# Bright colors
+
+everforest_dark.toml
+# Colors (Everforest Dark Medium)
+# Default colors
+# Normal colors
+# Bright colors
+
+everforest_dark_hard.toml
+# Colors (Everforest Dark Hard)
+
+everforest_dark_medium.toml
+# Colors (Everforest Dark Medium)
+
+everforest_dark_soft.toml
+# Colors (Everforest Dark Soft)
+
+everforest_light.toml
+# Colors (Everforest Light Medium)
+# Default colors
+# Normal colors
+# Bright Colors
+
+everforest_light_hard.toml
+# Colors (Everforest Light Hard)
+
+everforest_light_medium.toml
+# Colors (Everforest Light Medium)
+
+everforest_light_soft.toml
+# Colors (Everforest Light Soft)
+
+falcon.toml
+# falcon colorscheme for alacritty
+# by fenetikm, https//github.com/fenetikm/falcon
+# Default colors
+# Normal colors
+# Bright colors
+
+flat_remix.toml
+
+flexoki-light.toml
+# source https://github.com/kepano/flexoki/blob/main/alacritty/flexoki-light.toml
+
+flexoki.toml
+# based on https//stephango.com/flexoki and https//github.com/kepano/flexoki/tree/main/alacritty
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+ganbaru.toml
+# Colors (Ganbaru)
+# Default colors
+# Normal colors
+# Bright colors
+
+ganbaru_matcha.toml
+# Colors (Ganbaru)
+# Default colors
+# Normal colors
+# Bright colors
+
+github_dark.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_dark_colorblind.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_dark_default.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_dark_dimmed.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_dark_high_contrast.toml
+# (Github Dark High Contrast) Colors for Alacritty
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+github_dark_tritanopia.toml
+# (Github Dark Tritanopia) Colors for Alacritty
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+github_light.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_light_colorblind.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_light_default.toml
+# github Alacritty Colors
+# Default colors
+# Normal colors
+# Bright colors
+
+github_light_high_contrast.toml
+# (Github Light High Contrast) Colors for Alacritty
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+github_light_tritanopia.toml
+# (Github Light Tritanopia) Colors for Alacritty
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+gnome_terminal.toml
+# Gnome (Gnome Terminal Default)
+# Default colors
+# Normal colors
+# Bright colors
+
+google.toml
+
+gotham.toml
+# Colors (Gotham)
+# Default colors
+# Normal colors
+# Bright colors
+
+gruber_darker.toml
+# author: rexim
+# from: https://github.com/rexim/gruber-darker-theme
+
+gruvbox_dark.toml
+# Colors (Gruvbox dark)
+# Default colors
+# hard contrast background = = '#1d2021'
+# soft contrast background = = '#32302f'
+# Normal colors
+# Bright colors
+
+gruvbox_light.toml
+# Colors (Gruvbox light)
+# Default colors
+# hard contrast background = = '#f9f5d7'
+# soft contrast background = = '#f2e5bc'
+# Normal colors
+# Bright colors
+
+gruvbox_material.toml
+# Colors (Gruvbox Material Dark Medium)
+
+gruvbox_material_hard_dark.toml
+# Colors (Gruvbox Material Hard Dark)
+# Default colors
+# Normal colors
+# Bright colors (same as normal colors)
+
+gruvbox_material_hard_light.toml
+# Colors (Gruvbox Material Hard Light)
+# Default colors
+# Normal colors
+# Bright colors (same as normal colors)
+
+gruvbox_material_medium_dark.toml
+# Colors (Gruvbox Material Medium Dark)
+# Default colors
+# Normal colors
+# Bright colors (same as normal colors)
+
+gruvbox_material_medium_light.toml
+# Colors (Gruvbox Material Medium Light)
+# Default colors
+# Normal colors
+# Bright colors (same as normal colors)
+
+gruvbox_material_soft_dark.toml
+# Colors (Gruvbox Material Soft Dark)
+# *corresponding to VS Code theme
+
+hardhacker.toml
+# hardhacker colorscheme for alacritty
+# by xin wu, https//github.com/hardhackerlabs/theme-alacritty
+# Default colors
+# Normal colors
+# Bright colors
+
+hatsunemiku.toml
+
+high_contrast.toml
+# Colors (High Contrast)
+# Default colors
+# Colors the cursor will use if `custom_cursor_colors` is true
+# Normal colors
+# Bright colors
+
+horizon_dark.toml
+# Colors (Horizon Dark)
+# Primary colors
+# Normal colors
+# Bright colors
+
+hyper.toml
+# Colors (Hyper)
+# Default colors
+# Normal colors
+# Bright colors
+
+iceberg.toml
+# Default colors
+# Cursor colors
+# Selection colors
+# Normal colors
+# Bright colors
+
+inferno.toml
+# Inferno theme
+# Source https//github.com/hafiz-muhammad/inferno-alacritty-theme
+# Default colors
+# Normal colors
+# Bright colors
+
+iris.toml
+# Colors (Iris)
+# Default colors
+# Normal colors
+# Bright colors
+
+iterm.toml
+# Colors (iTerm 2 default theme)
+# Default colors
+# Normal colors
+# Bright colors
+
+iterm_solardark.toml
+# Colors (iTerm 2 SolarDark theme)
+# Default colors
+# Normal colors
+# Bright colors
+
+kanagawa_dragon.toml
+# Colors (Kanagawa Dragon)
+# Source https//github.com/rebelot/kanagawa.nvim
+
+kanagawa_wave.toml
+# Colors (Kanagawa Wave)
+# Source https//github.com/rebelot/kanagawa.nvim
+
+kimbie_dark.toml
+
+kimbie_light.toml
+
+kitty.toml
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+konsole_linux.toml
+# Color theme ported from Konsole Linux colors
+
+linux.toml
+# Linux console default colors
+# Default colors
+# Normal colors
+# Bright colors
+
+low_contrast.toml
+# Colors (Dim)
+# Default colors
+# Normal colors
+# Bright colors
+
+marine_dark.toml
+# Marine Dark Theme
+# Source https//github.com/ProDeSquare/alacritty-colorschemes/blob/master/themes/marine_dark.yaml
+# Default colors
+# Normal colors
+# Bright colors
+
+material_theme.toml
+# Colors (Material Theme)
+# Default colors
+# Normal colors
+# Bright colors
+
+material_theme_mod.toml
+# Colors (Material Theme)
+# Default colors
+# Normal colors
+# Bright colors
+
+meliora.toml
+# Bright and dim foreground colors
+# Cursor colors
+# Search colors
+# Keyboard regex hints
+# Selection colors
+# Normal colors
+# Bright colors
+# Dim colors
+
+miasma.toml
+# miasma: https://github.com/xero/miasma.nvim
+# Primary colors
+# Normal colors
+# Bright colors
+
+midnight_haze.toml
+# Midnight Haze theme
+# Source https//github.com/hafiz-muhammad/midnight-haze-alacritty-theme
+# Default colors
+# Normal colors
+# Bright colors
+
+modus_operandi.toml
+# Colors (modus-operandi)
+# Soruce https://protesilaos.com/emacs/modus-themes
+
+modus_vivendi.toml
+# Colors (modus-vivendi)
+# Soruce https://protesilaos.com/emacs/modus-themes
+
+monokai.toml
+
+monokai_charcoal.toml
+# Colours (Monokai Charcoal)
+# Default Colours
+# Normal Colours
+# Bright Colours
+
+monokai_pro.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+moonfly.toml
+# Upstream: github.com/bluz71/vim-moonfly-colors
+
+moonlight_ii_vscode.toml
+
+msx.toml
+# Colors (MSX-like)
+# Notice that MSX used blue as background so [bright] blue and [bright] black
+# are reversed in this theme. Also MSX had only 15 colors (color 0 was
+# transparent) so 'gray' (#CCCCCC) is used two times both as white and
+# bright black.
+# Default colors
+# Normal colors
+# It is 'dark blue' not black
+# It is 'black' not blue
+# It is 'medium red' not magenta
+# It is 'medium green' not cyan
+# It is 'gray' not white
+# Bright colors
+# It is 'light blue' not bright black
+# It is 'gray' not bright blue
+# It is 'magenta' not bright magenta
+# It is 'cyan' not bright cyan
+
+night_owl.toml
+# Default colors
+# Cursor colors
+# Search colors
+# Selection colors
+# Normal colors
+# Bright colors
+
+night_owlish_light.toml
+# Colors (Night Owlish Light)
+
+nightfly.toml
+# Source https://github.com/bluz71/vim-nightfly-colors
+
+nightfox.toml
+# Nightfox Alacritty Colors
+## name: nightfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/nightfox/alacritty.toml
+
+noctis_lux.toml
+# Colors (NoctixLux)
+# Default colors
+# Normal colors
+# Bright colors
+
+nord.toml
+# Colors (Nord)
+# Default colors
+# Normal colors
+# Bright colors
+
+nord_light.toml
+# Colors (Nord light) theme based on https//github.com/nordtheme/alacritty/issues/28#issuecomment-1422225211
+# Default colors
+# Normal colors
+# Bright colors
+
+nordfox.toml
+# Nightfox Alacritty Colors
+## name: nordfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/nordfox/alacritty.toml
+
+nordic.toml
+# Colors (Nordic)
+
+nvim_dark.toml
+
+oceanic_next.toml
+# Colors (Oceanic Next)
+# Default colors
+# Normal colors
+# Bright colors
+
+omni.toml
+
+one_dark.toml
+# Colors (One Dark)
+# Default colors
+# Normal colors
+# Bright colors
+
+one_light.toml
+
+oxocarbon.toml
+# Colors (Oxocarbon)
+# Source https://vimcolorschemes.com/nyoom-engineering/oxocarbon.nvim
+# Default colors
+# Normal colors
+# Bright colors
+
+palenight.toml
+# iTerm2 Material Design - Palenight theme for Alacritty
+# Source  https//github.com/JonathanSpeek/palenight-iterm2
+# Default colors
+# Normal colors
+# Bright colors
+
+panda.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+papercolor_dark.toml
+# Colors (PaperColor - Dark)
+# Default colors
+# Normal colors
+# Bright colors
+
+papercolor_light.toml
+# Colors (PaperColor - Light)
+# Default colors
+# Normal colors
+# Bright colors
+
+papertheme.toml
+# Colors (Paper Theme)
+# Default colors
+# Normal colors
+# Bright colors
+
+pastel_dark.toml
+# From iTerm2 Pastel Dark theme
+# Default colors
+# Cursor colors
+# Normal colors
+# Bright colors
+
+pencil_dark.toml
+# Colors (Pencil Dark)
+# Default Colors
+# Normal colors
+# Bright colors
+
+pencil_light.toml
+# Colors (Pencil Light)
+# Default Colors
+# Normal colors
+# Bright colors
+
+pink_cat_boo.toml
+# Pink Cat Boo Theme 
+# Source: https://github.com/ftsamoyed/PinkCatBoo
+
+rainbow.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+remedy_dark.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+rigel.toml
+# Rigel theme
+# Source: https://github.com/Rigellute/rigel/blob/master/alacritty.toml
+
+rose_pine.toml
+
+rose_pine_dawn.toml
+
+rose_pine_moon.toml
+
+seashells.toml
+# Colors (SeaShells)
+# Source  https//raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/SeaShells.itermcolors
+# Default colors
+# Normal colors
+# Bright colors
+
+selenized_dark.toml
+# Colors (Selenized Dark)
+
+selenized_light.toml
+# Colors (Selenized Light)
+
+seoul256-light.toml
+# Seoul256 Light Alacritty Colors
+## name: seoul256-light
+## inspired by: https://github.com/junegunn/seoul256.vim
+
+smoooooth.toml
+# Color theme ported from iTerm 2 Smoooooth
+
+snazzy.toml
+# Colors (Snazzy)
+# Default colors
+# Normal colors
+# Bright colors
+
+solarized_dark.toml
+# Colors (Solarized Dark)
+# Default colors
+# Normal colors
+# Bright colors
+
+solarized_light.toml
+# Colors (Solarized Light)
+# Default colors
+# Normal colors
+# Bright colors
+
+solarized_osaka.toml
+# Colors (Solarized Osaka)
+# Source https://github.com/craftzdog/solarized-osaka.nvim
+# Default colors
+# Normal colors
+# Bright colors
+
+solarized_osaka_day.toml
+# Colors (Solarized Osaka: Day)
+# Source https://github.com/craftzdog/solarized-osaka.nvim
+# Default colors
+# Normal colors
+# Bright colors
+
+sonokai.toml
+# sonokai.toml: Sonokai color scheme for Alacritty.
+
+spacegray.toml
+# Spacegray, from Sublime Text
+# Source https://github.com/SublimeText/Spacegray
+# Default colors
+# Normal colors
+# Bright colors
+
+synthwave_84.toml
+
+taerminal.toml
+# Colors (Taerminal)
+# Default colors
+# Normal colors
+# Bright colors
+
+tango_dark.toml
+# GNOME Terminal Tango Dark
+
+tender.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+terafox.toml
+# Nightfox Alacritty Colors
+## name: terafox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/terafox/alacritty.toml
+
+terminal_app.toml
+# Colors (Terminal.app)
+# Default colors
+# Normal colors
+# Bright colors
+
+thelovelace.toml
+# Default colors
+# Normal colors
+# Bright colors
+
+tokyo_night.toml
+# Colors (Tokyo Night)
+# Source https//github.com/zatchheems/tokyo-night-alacritty-theme
+# Default colors
+# Normal colors
+# Bright colors
+
+tokyo_night_enhanced.toml
+
+tokyo_night_light.toml
+
+tokyo_night_storm.toml
+# Colors (Tokyo Night Storm variant)
+# Source https//github.com/zatchheems/tokyo-night-alacritty-theme
+# Default colors
+# Normal colors
+# Bright colors
+
+tomorrow.toml
+# Colors (Tomorrow)
+
+tomorrow_night.toml
+# Colors (Tomorrow Night)
+# Default colors
+# Normal colors
+# Bright colors
+
+tomorrow_night_blue.toml
+# Colors (Tomorrow Night Blue)
+
+tomorrow_night_bright.toml
+# Colors (Tomorrow Night Bright)
+# Default colors
+# Normal colors
+# Bright colors
+
+tomorrow_night_eighties.toml
+# Colors (Tomorrow Night Eighties)
+
+ubuntu.toml
+# 0x From the Ubuntu terminal color palette
+# 0x Default colors
+# 0x Colors the cursor will use if `custom_cursor_colors` is true
+# 0x Normal colors
+# 0x Bright colors
+
+vesper.toml
+# Colors (Vesper)
+# Source https://github.com/raunofreiberg/vesper
+
+vscode.toml
+
+wombat.toml
+# Colors (Wombat)
+# Default colors
+# Normal colors
+# Bright colors
+
+xterm.toml
+# XTerm's default colors
+# Default colors
+# Normal colors
+# Bright colors
+
+zenburn.toml
+# Colors (Zenburn)
+# Orginally designed by jnurmine for vim.
+# Default colors
+# Normal colors
+# Bright colors
