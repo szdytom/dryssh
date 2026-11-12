@@ -8,6 +8,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.IOException
 import java.net.Socket
 import java.net.UnknownHostException
 import java.util.concurrent.CountDownLatch
@@ -102,6 +103,13 @@ class NetworkAccessTest {
 				assertTrue(cellAddresses.contains(socket.localAddress))
 				socket.soTimeout = 5_000
 				assertTrue(socket.getInputStream().bufferedReader().readLine().startsWith("SSH-"))
+				if (isolateDns) {
+					val rule = "OUTPUT -o eth0 -p tcp --dport $port -j REJECT"
+					root("iptables -I $rule")
+					cleanupRules.add("iptables -D $rule")
+					assertThrows(IOException::class.java) { Socket(host, port).use { } }
+					Log.i("DrySSH", "Route isolation: the fixture refuses cellular TCP; WLAN must carry SSH")
+				}
 				access.open(lookupHost, port, true, wlan) { }.use { bound ->
 					assertTrue(wlanAddresses.contains(bound.localAddress))
 					assertNotEquals(socket.localAddress, bound.localAddress)
