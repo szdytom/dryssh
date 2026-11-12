@@ -29,6 +29,7 @@ android {
 }
 dependencies {
 	implementation(project(":terminal"))
+	implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 	implementation(platform("androidx.compose:compose-bom:2026.09.00"))
 	implementation("androidx.compose.material3:material3")

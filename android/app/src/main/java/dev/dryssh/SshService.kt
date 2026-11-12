@@ -70,6 +70,10 @@ class SshService : Service() {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 	private val mutableState = MutableStateFlow(UiState())
 	val state = mutableState.asStateFlow()
+	companion object {
+		private val mutableDraft = MutableStateFlow("")
+	}
+	val draft = mutableDraft.asStateFlow()
 	private var policy = ""
 	private var policyState = "idle"
 	private var request: ConnectionRequest? = null
@@ -161,6 +165,20 @@ class SshService : Service() {
 		if (accept) trusted.edit().putString(request!!.trustKey, key.fingerprint).apply()
 		mutableState.value = state.value.copy(hostKey = null)
 		NativeBridge.trust(current.nativeId, accept)
+	}
+
+	fun updateDraft(text: String) {
+		mutableDraft.value = text
+	}
+
+	fun pasteDraft(plain: Boolean = false): Boolean {
+		val text = draft.value
+		if (state.value.state != "connected" || text.isEmpty()) return false
+		if (!plain && text.any { it == '\n' || it == '\r' }) {
+			return terminal.pasteTextIfBracketed(text)
+		}
+		terminal.pasteText(text)
+		return true
 	}
 
 	private fun transition(kind: String, data: Any? = null) {

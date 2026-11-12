@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,6 +67,7 @@ class MainActivity : ComponentActivity() {
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
+		bindService(Intent(this, SshService::class.java), binding, Context.BIND_AUTO_CREATE)
 		setContent {
 			MaterialTheme(
 				colorScheme = darkColorScheme(
@@ -87,14 +89,10 @@ class MainActivity : ComponentActivity() {
 			}
 		}
 	}
-	override fun onStart() {
-		super.onStart()
-		bindService(Intent(this, SshService::class.java), binding, Context.BIND_AUTO_CREATE)
-	}
-	override fun onStop() {
+	override fun onDestroy() {
 		unbindService(binding)
 		service = null
-		super.onStop()
+		super.onDestroy()
 	}
 }
 
@@ -110,6 +108,7 @@ private fun SessionScreen(
 		configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
 	var keyboard by remember(hardwareKeyboard) { mutableStateOf(!hardwareKeyboard) }
 	var showConnect by remember { mutableStateOf(false) }
+	var showEditor by rememberSaveable { mutableStateOf(false) }
 	var stayAwake by remember { mutableStateOf(true) }
 	val view = LocalView.current
 	DisposableEffect(state.state, stayAwake) {
@@ -128,6 +127,7 @@ private fun SessionScreen(
 					Text(state.detail, style = MaterialTheme.typography.labelSmall, maxLines = 2)
 				}
 				TextButton(onClick = { showConnect = true }) { Text("Connect") }
+				TextButton(onClick = { showEditor = true }) { Text("Editor") }
 				if (state.state !=
 					"idle"
 				) {
@@ -162,6 +162,7 @@ private fun SessionScreen(
 			}
 		}
 	}
+	if (showEditor) EditorDialog(session) { showEditor = false }
 	if (showConnect) {
 		ConnectDialog(
 			dismiss = { showConnect = false },
