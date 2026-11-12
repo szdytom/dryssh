@@ -152,7 +152,10 @@ fn send_input(
 		return Ok(false);
 	};
 	let bytes = env.convert_byte_array(&bytes)?;
-	Ok(endpoint.commands.try_send(Command::Input(bytes)).is_ok())
+	Ok(endpoint
+		.commands
+		.blocking_send(Command::Input(bytes))
+		.is_ok())
 }
 
 export!(extern fn resize(id: jlong, columns: jint, rows: jint, width: jint, height: jint) -> jboolean,);
@@ -170,7 +173,7 @@ fn resize(
 	};
 	Ok(endpoint
 		.commands
-		.try_send(Command::Resize {
+		.blocking_send(Command::Resize {
 			columns: columns as u32,
 			rows: rows as u32,
 			width: width as u32,

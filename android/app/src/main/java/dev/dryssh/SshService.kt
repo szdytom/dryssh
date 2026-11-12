@@ -18,12 +18,14 @@ import android.util.Log
 import androidx.compose.ui.graphics.Color
 import java.io.IOException
 import java.net.Socket
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +48,9 @@ class SshService : Service() {
 		val hostKey: HostKey? = null
 	)
 	private class Attempt(val generation: Long, val network: Network?) {
+		val writes = Channel<() -> Boolean>(Channel.UNLIMITED)
+		val pendingBytes = AtomicInteger()
+		var writer: Job? = null
 		var job: Job? = null
 
 		@Volatile var nativeId = 0L
@@ -64,6 +69,8 @@ class SshService : Service() {
 			cancelled = true
 			if (nativeId != 0L) NativeBridge.close(nativeId)
 			socket?.close()
+			writes.cancel()
+			writer?.cancel()
 			job?.cancel()
 		}
 	}
@@ -289,6 +296,16 @@ class SshService : Service() {
 						ParcelFileDescriptor.fromSocket(socket).detachFd(),
 						options.toString()
 					)
+				current.writer = scope.launch(Dispatchers.IO) {
+					for (write in current.writes) {
+						if (!write()) {
+							withContext(Dispatchers.Main.immediate) {
+								if (attempt === current) failed(current, "network", "Input transport closed")
+							}
+							break
+						}
+					}
+				}
 				withContext(Dispatchers.IO) {
 					while (true) {
 						val frame = NativeBridge.nextEvent(current.nativeId) ?: break
@@ -362,18 +379,27 @@ class SshService : Service() {
 	private fun send(bytes: ByteArray) {
 		val current = attempt ?: return
 		if (state.value.state != "connected") return
-		if (!NativeBridge.sendInput(current.nativeId, bytes)) {
-			failed(current, "network", "Input could not be sent; connection closed")
+		if (current.pendingBytes.addAndGet(bytes.size) > 4 * 1024 * 1024) {
+			current.pendingBytes.addAndGet(-bytes.size)
+			failed(current, "network", "Input buffer full; connection closed")
+			return
 		}
+		val queued = current.writes.trySend {
+			try {
+				NativeBridge.sendInput(current.nativeId, bytes)
+			} finally {
+				current.pendingBytes.addAndGet(-bytes.size)
+			}
+		}
+		if (queued.isFailure) current.pendingBytes.addAndGet(-bytes.size)
 	}
 
 	private fun resize(dimensions: TerminalDimensions) {
-		val id = attempt?.nativeId ?: return
-		if (id !=
-			0L
-		) {
+		val current = attempt ?: return
+		if (current.nativeId == 0L) return
+		current.writes.trySend {
 			NativeBridge.resize(
-				id,
+				current.nativeId,
 				dimensions.columns,
 				dimensions.rows,
 				dimensions.widthPixels,
