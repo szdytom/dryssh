@@ -1,0 +1,6 @@
+Unmodified GNU Unifont 18.0.01, compressed for instrumented font-import tests.
+https://www.unifoundry.com/pub/unifont/unifont-18.0.01/font-builds/unifont-18.0.01.otf
+Uncompressed SHA-256: 88d0a14d4aa9a96419720b39ba5da921a59560d76d4ec7d523acc06ed85cd3c2
+Copyright notices and contributor credits are retained in the font metadata.
+Distributed under the SIL Open Font License 1.1 (see Unifont-LICENSE.txt).
+This fixture is included only in the test APK, not in the app APK.
