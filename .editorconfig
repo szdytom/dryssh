@@ -1,0 +1,6 @@
+[*.{kt,kts}]
+ktlint_code_style = android_studio
+indent_style = tab
+tab_width = 4
+indent_size = tab
+

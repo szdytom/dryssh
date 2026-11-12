@@ -1,0 +1,27 @@
+/target/
+/artifacts/
+*.profraw
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.zed/
+*.swp
+
+# Agentic Tools
+.codex
+.claude
+CLAUDE.md
+AGENTS.local.md
+AGENTS.override.md
+.dsh
+.workbuddy
+
+# Worktrunk configs
+.config/wt.toml
+.worktreeinclude
+
+# Local Plan
+/plan.md
+
