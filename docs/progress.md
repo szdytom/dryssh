@@ -1,64 +1,126 @@
 # Delivery status
 
-Scope: `plan.md` sections 2–6, with **Android emulator acceptance** authorized by
-the user on 2026-11-13. Hardware/HarmonyOS NEXT verification remains with the user.
-A terminal demo is only M0; it does not satisfy the daily-use release requirements.
+The daily-use feature set in `plan.md` sections 2–6 is implemented and accepted in
+Android emulators, as authorized by the user. Physical HarmonyOS/卓易通, Bluetooth
+hardware and Doubao verification remain with the user.
 
 ## Milestones
 
-| Stage | Current evidence | Remaining |
-| --- | --- | --- |
-| M0 | APK installs and launches on API 35 x86_64; 5 device tests pass; ASCII and Chinese rendered; lint has no errors; build documented | Final ARM64 packaging, phone verification by user |
-| M1 | Rust SSH driver and policy tests pass; Android/OpenSSH password login, host trust, PTY resize and I/O pass; original shell PID survives recreation, rotation and a short background interval with reconnect disabled | Broader tmux/Codex/git/nvim keyboard workflows |
-| M2 | Native paste negotiation, UTF-8, Ctrl/Alt, OSC 52 and dimensions pass on device; foreground-service lifecycle tested end to end | 30-minute background and lock, restart acceptance |
-| M3 | Notification return/disconnect and automatic reconnect are implemented; OSC 52 callback is wired | Settings, full touch/mouse and clipboard workflows |
-| M4 | Not started | Full workflow acceptance and regression fixes |
+| Stage | Accepted evidence |
+| --- | --- |
+| M0 | Installable signed APK; pinned toolchain/dependencies; ARM64 and x86_64 native libraries; build/logging instructions |
+| M1 | Real SSH password/private-key login, host trust/change rejection, shell/PTY, keyboard input, recreation and orientation |
+| M2 | Direct IME contract, tmux/nvim bracketed paste, original connections across background/lock for 30 minutes, strict WLAN routing/DNS and credential restart survival |
+| M3 | Saved profiles, encrypted credentials, reconnect policy, appearance/fonts/keys/actions UI, editor, touch/mouse/history, clipboard and notification controls |
+| M4 | Real tmux, Codex CLI, interactive git and nvim workflows; regression coverage; documented limits |
 
-## Decisions
+The user-requested landscape change uses a **52 dp left icon rail**, with no top or
+bottom application toolbar. Tests compare rail/terminal bounds, exercise the
+controls and check the original shell PID. Status, screen-awake and disconnect
+remain available in the session menu. Icon controls have accessible names and
+long-press tooltips. Settings pages keep their controls visible above the IME.
 
-- Kotlin/Compose app; platform-independent Rust core; small JNI bridge.
-- Vendor only `src/main` from ConnectBot termlib at the plan's pinned commit.
-  Preserve upstream source and licenses; record local patches in
-  `android/terminal/UPSTREAM.md`.
-- Terminal-first UI: slate background `#101A25`, foreground `#D4DFE9`, chrome
-  `#182433`, accent `#8AC6DB`. Android sans for controls, monospace for terminal.
-  A compact session/status row keeps terminal cells available on a phone.
-- JDK 21, Gradle 9.9.1 (distribution SHA-256 verified by wrapper), AGP 9.4.1,
-  Kotlin Compose plugin 2.4.21, Compose BOM 2026.09.00, NDK 29.0.14206865.
+## Release acceptance — 2026-11-13
 
-## Verification evidence
+- **29 instrumented tests passed, zero skipped**, against the actual release APK
+  on the API 35 AOSP x86_64 phone emulator. The suite includes the stronger
+  cellular DNS/TCP isolation case. Generated report:
+  `artifacts/android/emulator-5554/integration.txt`.
+- **17 Rust tests passed**, including property-based policy/configuration tests and
+  real SSH protocol integration. Formatting, Clippy with warnings denied,
+  Spotless and Android release lint pass. Lint has no errors; remaining warnings
+  concern dependency updates, style suggestions and resource/API metadata.
+- The APK contains `arm64-v8a` and `x86_64`, requires API 30+, targets API 37,
+  and passes APK signature verification. ARM64 is cross-compiled; emulator
+  execution uses x86_64. The APK uses the local debug signing key for updates.
 
-- API 35 AOSP x86_64 phone emulator, 2026-11-13: 20 instrumented tests passed,
-  no skips, against the local OpenSSH 9.6 fixture. Report:
-  `artifacts/android/emulator-5554/integration.txt` (generated, not tracked).
-- The lifecycle case disables auto-reconnect and compares newly printed remote
-  shell PIDs before/after recreation, landscape rotation and two seconds in the
-  background. This is **not** the required 30-minute acceptance.
-- Host SSH integration covers encrypted/unencrypted Ed25519 import, password
-  rejection, changed/rejected host keys before authentication, resize, UTF-8,
-  dropping pre-authentication input and cancellation during host-key approval.
-- Strict WLAN socket/DNS route acceptance passed against the fixture using
-  `10.0.2.2.nip.io`: a process-default cellular socket used `10.0.2.15`, while
-  the explicit WLAN socket used `10.0.2.16`; both received OpenSSH banners.
-  A separate WLAN-loss case also passes: cellular remains available while the
-  session waits, recovery starts a new shell PID, offline input is not replayed,
-  and explicit disconnect cancels future recovery.
+### Original connection survival
 
-- Direct Android IME acceptance now passes through the real rendered input view
-  and OpenSSH: full text/extracted-text support, uncommitted candidate isolation,
-  Chinese composition replacement, consecutive voice-style commits, local and
-  committed deletion, `finishComposingText`, API 34 `replaceText`, and a following
-  physical Ctrl-E event. The server verifies the exact final UTF-8 bytes. The
-  original `TYPE_NULL` configuration failed this test before the adapter patch.
+Auto-reconnect was **disabled**. Both devices used a simulated unplugged battery;
+no battery-optimization exemption was added. The background case opened Android
+Settings. The lock case asserted a locked keyguard and a noninteractive display,
+which remained noninteractive through the full interval.
 
-- The native multiline editor preserves its draft while backgrounded/recreated,
-  refuses protected multiline paste when mode is disabled, and offers an explicit
-  plain-paste action. Real tmux/nvim acceptance verifies Chinese multiline file
-  contents and an Enter mapping remains untriggered during bracketed paste.
-  A concurrent native mode-toggle test verifies every accepted protected paste
-  remains bracketed.
+| Case | Elapsed | Shell PID before/after | sshd PIDs before/after | Authentications |
+| --- | --- | --- | --- | --- |
+| Background, API 35 tablet | 1,801.237 s | 1171 / 1171 | 1170, 1159 / 1170, 1159 | 1 |
+| Lock, API 35 phone | 1,801.919 s | 1223 / 1223 | 1222, 1211 / 1222, 1211 | 1 |
 
-- Saved profiles and encrypted credentials pass reload and integrity tests.
-  Swapped or modified ciphertext is rejected. A saved encrypted Ed25519 key
-  authenticates to OpenSSH after repository recreation. A separate Compose
-  acceptance passes profile creation, editing, recreation and deletion.
+The server records both phases; a process-environment snapshot identifies the
+original TCP connection, and sshd logs show one authentication for its source
+address/port. Generated evidence is under
+`artifacts/android/emulator-5556/soak-background/` and
+`artifacts/android/emulator-5558/soak-lock/`. The `soak.py --verify-only` check also
+passes for both reports. These checks do not substitute a new connection or tmux
+reattachment for keeping the original SSH session.
+
+### Network policy
+
+- With the test process default forced to cellular, an ordinary socket uses
+  `10.0.2.15`; the strict WLAN socket uses `10.0.2.16`, and both read real SSH
+  banners before isolation.
+- The additional AOSP-root fixture blocks cellular UDP/TCP DNS. A fresh wildcard
+  hostname fails on the cellular resolver. It then blocks cellular TCP to the SSH
+  fixture and verifies a new cellular connection fails. The WLAN-specific DNS
+  lookup and bound socket still reach the same SSH endpoint. Firewall/resolver
+  settings are restored. Root is required only for this controlled test.
+- A separate WLAN-loss case leaves cellular available, observes waiting for WLAN,
+  reconnects to a new shell after recovery, and verifies offline input is not
+  replayed. Explicit disconnect cancels subsequent recovery.
+
+### Credentials and host trust
+
+AES-256-GCM credentials survive repository recreation, application force-stop and
+an emulator reboot. Both saved-password and saved encrypted-Ed25519-key login
+succeed after each restart. Swapped/tampered ciphertext is rejected; failed profile
+updates retain the prior credential. Configuration has references, not credential
+values. Host integration also covers incorrect credentials, changed/rejected host
+keys before authentication, unencrypted keys and transport cancellation.
+
+### Input and terminal workflows
+
+- The real Android input view and OpenSSH verify exact Chinese UTF-8 bytes for
+  local composition, consecutive voice-style commits, deletion, composition
+  finish, API 34 replacement and a following physical Ctrl-E event. The old
+  `TYPE_NULL` implementation failed before the adapter change.
+- A native multiline editor retains drafts across background/recreation. Real
+  tmux/nvim file contents verify negotiated bracketed paste bypasses an Enter
+  mapping and adds no trailing Return. Mode-off multiline paste stays blocked
+  until explicit fallback. Concurrent native mode changes cannot leak unframed
+  protected paste.
+- Real Codex CLI 0.167.0 runs inside tmux, using the pinned standalone binary with
+  `--no-daemon`. A local fixed Responses provider hashes the submitted multiline
+  Chinese body and responds with that hash; paste alone does not submit it.
+  Subsequent interactive `git add -p` stages the actual changed hunk. This tests
+  the real CLI, not live cloud inference or account authorization.
+- View-level touch coordinates modify the intended nvim character. Wheel input
+  scrolls its view; nvim OSC 52 copying through tmux reaches Android's clipboard.
+  Local history, explicit selection and copy also pass. Native protocol coverage
+  includes mouse clicks/wheels, alternate scroll and DEC 1007.
+- Actual orientation and IME changes are checked against remote `stty size`, while
+  the original shell PID stays unchanged. A 600-character key burst stays ordered
+  without closing SSH. Input backpressure is handled off the UI thread and queued
+  work is cancelled with its connection.
+- Unifont 18.0.01 import, glyph/dual-width checks, palette persistence, mapping
+  edits/reload and the editor shortcut pass. Notification taps return to the
+  original shell, and the notification disconnect action cancels recovery.
+
+## Practical limits
+
+- Phone/container-specific network enforcement, background survival, Android
+  Keystore behavior, actual Bluetooth events and Doubao speech must be checked
+  on the user's HarmonyOS/卓易通 environment. Emulator success does not assert
+  those platform capabilities.
+- OS process termination closes its TCP session. Profiles/credentials persist;
+  active sessions and local editor drafts are not restored after process death.
+- Input waiting for the transport is bounded to 4 MiB. Font imports are bounded
+  to 32 MiB and private-key imports to 1 MiB.
+- System/IME-reserved key combinations depend on the device; configurable
+  mappings provide alternatives for events the application can receive.
+- This release covers direct SSH and one active session. Jump hosts, Mosh, VPN
+  adaptation, automatic tmux restoration, clipboard reads over OSC 52 and
+  configuration backup/export remain outside the agreed first-release scope.
+
+Build, fixture and rerun commands are in [README.md](../README.md). Terminal source
+pins, licenses and behavior changes are in
+[UPSTREAM.md](../android/terminal/UPSTREAM.md).
