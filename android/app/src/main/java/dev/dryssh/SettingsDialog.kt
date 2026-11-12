@@ -5,14 +5,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -84,8 +91,30 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 			}
 		}
 	}
-	AlertDialog(onDismissRequest = dismiss, title = { Text("Settings") }, text = {
-		Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+	SettingsPanel(
+		"Settings",
+		dismiss,
+		"Save settings",
+		!busy && colorValidity.values.all {
+			it
+		},
+		save = {
+			busy = true
+			scope.launch {
+				try {
+					withContext(Dispatchers.IO) {
+						repository.update(JSONObject(repository.config.value).put("settings", JSONObject(settings)))
+					}
+					dismiss()
+				} catch (failure: Exception) {
+					error = failure.message
+				} finally {
+					busy = false
+				}
+			}
+		}
+	) {
+		Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 			Row {
 				listOf("Appearance", "Keys", "Actions").forEach { title ->
 					TextButton(onClick = {
@@ -95,7 +124,7 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 				}
 			}
 			Column(
-				Modifier.verticalScroll(rememberScrollState()),
+				Modifier.weight(1f).verticalScroll(rememberScrollState()),
 				verticalArrangement = Arrangement.spacedBy(8.dp)
 			) {
 				when (page) {
@@ -179,23 +208,8 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 				error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 			}
 		}
-	}, confirmButton = {
-		TextButton(enabled = !busy && colorValidity.values.all { it }, onClick = {
-			busy = true
-			scope.launch {
-				try {
-					withContext(Dispatchers.IO) {
-						repository.update(JSONObject(repository.config.value).put("settings", JSONObject(settings)))
-					}
-					dismiss()
-				} catch (failure: Exception) {
-					error = failure.message
-				} finally {
-					busy = false
-				}
-			}
-		}) { Text("Save settings") }
-	}, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+	}
+
 	edit?.let { (kind, index) ->
 		ActionDialog(kind, current.getJSONArray(kind).optJSONObject(index), { edit = null }) { item ->
 			val candidate = JSONObject(settings).also { it.getJSONArray(kind).put(index, item) }
@@ -273,18 +287,50 @@ private fun ActionDialog(
 		)
 	}
 	var error by remember { mutableStateOf<String?>(null) }
-	AlertDialog(onDismissRequest = dismiss, title = {
-		Text(
-			if (kind ==
-				"bindings"
-			) {
-				"Key mapping"
-			} else {
-				"Quick action"
+	SettingsPanel(
+		if (kind ==
+			"bindings"
+		) {
+			"Key mapping"
+		} else {
+			"Quick action"
+		},
+		dismiss,
+		"Apply action",
+		true,
+		save = {
+			try {
+				val result = JSONObject()
+				if (kind ==
+					"bindings"
+				) {
+					result.put(
+						"key",
+						key
+					).put("modifiers", JSONObject().put("ctrl", ctrl).put("alt", alt).put("shift", shift))
+				} else {
+					result.put("name", name)
+				}
+				val output = JSONObject().put("kind", type)
+				if (type !=
+					"editor"
+				) {
+					output.put(
+						when (type) {
+							"control" -> "character"
+							"key" -> "key"
+							else -> "text"
+						},
+						value
+					)
+				}
+				save(result.put("action", output))
+			} catch (failure: Exception) {
+				error = failure.message
 			}
-		)
-	}, text = {
-		Column(Modifier.verticalScroll(rememberScrollState())) {
+		}
+	) {
+		Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
 			if (kind == "bindings") {
 				OutlinedTextField(key, {
 					key = it.lowercase()
@@ -335,37 +381,31 @@ private fun ActionDialog(
 			}
 			error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 		}
-	}, confirmButton = {
-		TextButton(onClick = {
-			try {
-				val result = JSONObject()
-				if (kind ==
-					"bindings"
-				) {
-					result.put(
-						"key",
-						key
-					).put("modifiers", JSONObject().put("ctrl", ctrl).put("alt", alt).put("shift", shift))
-				} else {
-					result.put("name", name)
+	}
+}
+
+@Composable
+private fun SettingsPanel(
+	title: String,
+	dismiss: () -> Unit,
+	saveLabel: String,
+	enabled: Boolean,
+	save: () -> Unit,
+	content: @Composable ColumnScope.() -> Unit
+) {
+	Dialog(
+		onDismissRequest = dismiss,
+		properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+	) {
+		Surface(Modifier.fillMaxSize()) {
+			Column(Modifier.safeDrawingPadding().imePadding().padding(16.dp)) {
+				Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+					Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+					TextButton(onClick = dismiss) { Text("Cancel") }
+					TextButton(enabled = enabled, onClick = save) { Text(saveLabel) }
 				}
-				val output = JSONObject().put("kind", type)
-				if (type !=
-					"editor"
-				) {
-					output.put(
-						when (type) {
-							"control" -> "character"
-							"key" -> "key"
-							else -> "text"
-						},
-						value
-					)
-				}
-				save(result.put("action", output))
-			} catch (failure: Exception) {
-				error = failure.message
+				content()
 			}
-		}) { Text("Apply action") }
-	}, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+		}
+	}
 }
