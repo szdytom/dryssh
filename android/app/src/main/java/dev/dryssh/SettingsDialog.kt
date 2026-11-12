@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,12 +54,14 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 		mutableStateOf(JSONObject(repository.config.value).getJSONObject("settings").toString())
 	}
 	val current = JSONObject(settings)
+	val themes = remember { TerminalTheme.load(context) }
+	val theme = TerminalTheme.selected(themes, current)
+	var showThemes by remember { mutableStateOf(false) }
 	var page by remember { mutableStateOf("Appearance") }
 	var error by remember { mutableStateOf<String?>(null) }
 	var busy by remember { mutableStateOf(false) }
 	var edit by remember { mutableStateOf<Pair<String, Int>?>(null) }
 	val imported = remember { mutableStateListOf<File>() }
-	val colorValidity = remember { mutableStateMapOf<String, Boolean>() }
 	fun change(update: (JSONObject) -> Unit) {
 		settings = JSONObject(settings).also(update).toString()
 	}
@@ -99,9 +100,7 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 		"Settings",
 		dismiss,
 		"Save settings",
-		!busy && colorValidity.values.all {
-			it
-		},
+		!busy,
 		save = {
 			busy = true
 			scope.launch {
@@ -124,7 +123,6 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 					TextButton(onClick = {
 						focus.clearFocus()
 						keyboard?.hide()
-						colorValidity.clear()
 						page = title
 					}) { Text(title) }
 				}
@@ -135,6 +133,8 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 			) {
 				when (page) {
 					"Appearance" -> {
+						TextButton(onClick = { showThemes = true }) { Text("Theme: ${theme.name}") }
+						ThemePreview(theme)
 						Text("Font size: ${current.getDouble("font_size").toInt()} sp")
 						Slider(
 							current.getDouble("font_size").toFloat(),
@@ -150,24 +150,6 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 						TextButton(onClick = {
 							change { it.put("font_ref", JSONObject.NULL) }
 						}) { Text("Use system font") }
-						ColorField("Foreground", current.getLong("foreground"), {
-							colorValidity["foreground"] = it
-						}) { color ->
-							change { it.put("foreground", color) }
-						}
-						ColorField("Background", current.getLong("background"), {
-							colorValidity["background"] = it
-						}) { color ->
-							change { it.put("background", color) }
-						}
-						Text("ANSI palette · #RRGGBB")
-						for (i in 0..15) {
-							ColorField("ANSI $i", current.getJSONArray("ansi").getLong(i), {
-								colorValidity["ansi$i"] = it
-							}) { color ->
-								change { it.getJSONArray("ansi").put(i, color) }
-							}
-						}
 					}
 					else -> {
 						val kind = if (page == "Keys") "bindings" else "quick_actions"
@@ -215,6 +197,12 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 			}
 		}
 	}
+	if (showThemes) {
+		ThemePicker(themes, theme, { showThemes = false }) { selected ->
+			change { selected.applyTo(it) }
+			showThemes = false
+		}
+	}
 
 	edit?.let { (kind, index) ->
 		ActionDialog(kind, current.getJSONArray(kind).optJSONObject(index), { edit = null }) { item ->
@@ -244,21 +232,6 @@ fun shortcutLabel(binding: JSONObject): String {
 		}
 	) +
 		binding.getString("key")
-}
-
-@Composable
-private fun ColorField(
-	label: String,
-	color: Long,
-	validity: (Boolean) -> Unit,
-	changed: (Long) -> Unit
-) {
-	var value by remember(color) { mutableStateOf("%06X".format(color and 0xffffff)) }
-	OutlinedTextField(value, {
-		value = it.removePrefix("#")
-		validity(value.matches(Regex("[0-9a-fA-F]{6}")))
-		if (value.matches(Regex("[0-9a-fA-F]{6}"))) changed(0xff000000L or value.toLong(16))
-	}, label = { Text(label) }, singleLine = true, isError = !value.matches(Regex("[0-9a-fA-F]{6}")))
 }
 
 @Composable
@@ -391,12 +364,13 @@ private fun ActionDialog(
 }
 
 @Composable
-private fun SettingsPanel(
+internal fun SettingsPanel(
 	title: String,
 	dismiss: () -> Unit,
-	saveLabel: String,
-	enabled: Boolean,
-	save: () -> Unit,
+	saveLabel: String? = null,
+	enabled: Boolean = true,
+	save: () -> Unit = {},
+	dismissLabel: String = "Cancel",
 	content: @Composable ColumnScope.() -> Unit
 ) {
 	Dialog(
@@ -407,8 +381,8 @@ private fun SettingsPanel(
 			Column(Modifier.safeDrawingPadding().imePadding().padding(16.dp)) {
 				Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 					Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-					TextButton(onClick = dismiss) { Text("Cancel") }
-					TextButton(enabled = enabled, onClick = save) { Text(saveLabel) }
+					TextButton(onClick = dismiss) { Text(dismissLabel) }
+					if (saveLabel != null) TextButton(enabled = enabled, onClick = save) { Text(saveLabel) }
 				}
 				content()
 			}

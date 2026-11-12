@@ -15,7 +15,14 @@ Saved profiles support passwords and imported private keys, including encrypted
 keys. Auto-reconnect defaults on; WLAN-only defaults off. Switching targets closes
 the previous session. Reconnection starts a fresh shell and never replays input.
 The default editor shortcut is Ctrl+Shift+E; mappings and quick actions are editable
-in Settings, along with colors, the ANSI palette, font import and size.
+in Settings, along with terminal themes, font import and size.
+
+Settings → Appearance → Theme offers searchable previews of all **179 bundled
+[Alacritty themes](https://github.com/alacritty/alacritty-theme)**, including
+Everforest Dark Medium, plus the original DrySSH palette. Themes work offline and
+apply foreground, background and all 16 ANSI colors together after saving.
+Existing custom colors are retained as “Saved colors” until replaced by a theme.
+The selected theme survives app restarts, including themes with identical palettes.
 
 Direct Android IME composition stays local until commit. The native multiline
 editor keeps a local draft and uses negotiated bracketed paste without adding

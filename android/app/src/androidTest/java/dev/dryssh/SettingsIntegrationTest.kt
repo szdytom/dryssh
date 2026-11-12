@@ -36,7 +36,7 @@ import org.junit.Test
 class SettingsIntegrationTest {
 	@get:Rule val compose = createEmptyComposeRule()
 
-	@Test fun fontPaletteAndMappingsPersistAndHandlePhysicalKeyEvents() {
+	@Test fun fontThemeAndMappingsPersistAndHandlePhysicalKeyEvents() {
 		SessionFixture().use { fixture ->
 			val repository = fixture.service.repository
 			val original = JSONObject(repository.config.value).getJSONObject("settings")
@@ -49,9 +49,13 @@ class SettingsIntegrationTest {
 					field.performScrollTo().performTextClearance()
 					field.performTextInput(value)
 				}
-				fill("Foreground", "C0FFEE")
-				fill("Background", "112233")
-				fill("ANSI 1", "BBAACC")
+				val theme = TerminalTheme.load(fixture.instrumentation.targetContext).first {
+					it.id == "everforest_dark_medium"
+				}
+				compose.onNodeWithText("Theme:", substring = true).performClick()
+				compose.onNode(hasText("Search themes") and hasSetTextAction())
+					.performTextInput("everforest dark medium")
+				compose.onNodeWithText("Everforest Dark Medium").performClick()
 				compose.onNodeWithText("Save settings").assertIsDisplayed()
 				compose.onNodeWithText("Keys").assertIsDisplayed()
 				compose.onNodeWithText("Appearance").performClick()
@@ -92,13 +96,15 @@ class SettingsIntegrationTest {
 				compose.onNodeWithText("Save settings").performClick()
 				fixture.awaitCondition {
 					JSONObject(repository.config.value).getJSONObject("settings").getLong("foreground") ==
-						0xffc0ffeeL
+						0xffd3c6aaL
 				}
 				val settings = JSONObject(
 					AppRepository(instrumentation.targetContext).config.value
 				).getJSONObject("settings")
-				assertEquals(0xff112233L, settings.getLong("background"))
-				assertEquals(0xffbbaaccL, settings.getJSONArray("ansi").getLong(1))
+				assertEquals(0xff2d353bL, settings.getLong("background"))
+				assertEquals(0xffe67e80L, settings.getJSONArray("ansi").getLong(1))
+				assertEquals("everforest_dark_medium", settings.getString("theme"))
+				assertTrue(theme.matches(settings))
 				font = File(repository.fonts, settings.getString("font_ref"))
 				val paint = Paint().apply {
 					typeface = Typeface.createFromFile(font!!)

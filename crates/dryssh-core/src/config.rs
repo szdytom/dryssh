@@ -65,6 +65,7 @@ pub struct QuickAction {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
+	pub theme: Option<String>,
 	pub foreground: u32,
 	pub background: u32,
 	pub ansi: [u32; 16],
@@ -77,6 +78,7 @@ pub struct Settings {
 impl Default for Settings {
 	fn default() -> Self {
 		Self {
+			theme: None,
 			foreground: 0xffd4dfe9,
 			background: 0xff101a25,
 			ansi: [
@@ -201,6 +203,13 @@ impl Configuration {
 			}
 		}
 		let settings = &self.settings;
+		if settings
+			.theme
+			.as_deref()
+			.is_some_and(|id| !valid_reference(id))
+		{
+			return Err("Invalid theme reference");
+		}
 		if !(6.0..=40.0).contains(&settings.font_size) {
 			return Err("Font size must be between 6 and 40");
 		}
@@ -244,6 +253,27 @@ mod tests {
 		assert!(serde_json::from_str::<Profile>(profile).is_err());
 		let mut config = config;
 		config.settings.font_ref = Some("../font".into());
+		assert!(config.validate().is_err());
+	}
+
+	#[test]
+	fn legacy_colors_survive_and_theme_references_roundtrip() {
+		let mut config: Configuration = serde_json::from_str(
+			r#"{"settings":{"foreground":4278256131,"background":4278453510}}"#,
+		)
+		.unwrap();
+		assert!(config.settings.theme.is_none());
+		assert_eq!(config.settings.foreground, 0xff010203);
+		assert_eq!(config.settings.background, 0xff040506);
+		config.settings.theme = Some("everforest_dark_medium".into());
+		config.validate().unwrap();
+		let restored: Configuration =
+			serde_json::from_str(&serde_json::to_string(&config).unwrap()).unwrap();
+		assert_eq!(
+			restored.settings.theme.as_deref(),
+			Some("everforest_dark_medium")
+		);
+		config.settings.theme = Some("../theme".into());
 		assert!(config.validate().is_err());
 	}
 

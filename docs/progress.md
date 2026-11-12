@@ -20,16 +20,31 @@ controls and check the original shell PID. Status, screen-awake and disconnect
 remain available in the session menu. Icon controls have accessible names and
 long-press tooltips. Settings pages keep their controls visible above the IME.
 
+Appearance now offers searchable offline themes instead of individual color
+fields: all 179 official Alacritty themes, including Everforest Dark Medium, plus
+the original DrySSH palette. Each preview shows foreground/background and both
+ANSI rows. Saving applies the complete palette; canceling preserves saved colors.
+Existing custom palettes remain available as “Saved colors”. Theme IDs distinguish
+upstream names with identical colors. Source pins, attribution and regeneration
+instructions are recorded in [android/THEMES.md](../android/THEMES.md).
+
 ## Release acceptance — 2026-11-13
 
-- **29 instrumented tests passed, zero skipped**, against the actual release APK
+- **32 instrumented tests passed, zero skipped**, against the actual release APK
   on the API 35 AOSP x86_64 phone emulator. The suite includes the stronger
   cellular DNS/TCP isolation case. Generated report:
   `artifacts/android/emulator-5554/integration.txt`.
-- **17 Rust tests passed**, including property-based policy/configuration tests and
+- **18 Rust tests passed**, including property-based policy/configuration tests and
   real SSH protocol integration. Formatting, Clippy with warnings denied,
   Spotless and Android release lint pass. Lint has no errors; remaining warnings
   concern dependency updates, style suggestions and resource/API metadata.
+- Theme coverage checks every bundled palette through Rust normalization, exact
+  Everforest colors, missing upstream ANSI defaults, identical-palette identities,
+  legacy custom colors, cancellation, light/dark selection, repository reload,
+  activity recreation, original SSH shell survival and landscape search with IME
+  dismissal. Font import and keyboard mapping acceptance also selects a theme.
+  Logs: `target/research/themes-regression-final.log`, `themes-rust-tests.log`,
+  `themes-clippy.log` and `themes-build-final.log` in the same directory.
 - The APK contains `arm64-v8a` and `x86_64`, requires API 30+, targets API 37,
   and passes APK signature verification. ARM64 is cross-compiled; emulator
   execution uses x86_64. The APK uses the local debug signing key for updates.
