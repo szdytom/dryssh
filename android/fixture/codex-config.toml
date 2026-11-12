@@ -1,0 +1,16 @@
+model = "dryssh-fixture"
+model_provider = "fixture"
+check_for_update_on_startup = false
+
+[model_providers.fixture]
+name = "Local terminal acceptance fixture"
+base_url = "http://127.0.0.1:3333/v1"
+wire_api = "responses"
+requires_openai_auth = false
+supports_websockets = false
+
+[projects."/home/dryssh"]
+trust_level = "trusted"
+
+[tui]
+screen_reader_detection_done = true
