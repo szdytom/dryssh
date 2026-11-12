@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -127,6 +128,12 @@ class NetworkAccess(
 				socket.tcpNoDelay = true
 				socket.keepAlive = true
 				socket.connect(InetSocketAddress(address, port), 15_000)
+				if (strict) {
+					Log.i(
+						"DrySSH",
+						"WLAN socket source: ${socket.localAddress.hostAddress}"
+					)
+				}
 				return socket
 			} catch (error: IOException) {
 				socket.close()

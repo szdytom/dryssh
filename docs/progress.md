@@ -10,8 +10,8 @@ A terminal demo is only M0; it does not satisfy the daily-use release requiremen
 | --- | --- | --- |
 | M0 | APK installs and launches on API 35 x86_64; 5 device tests pass; ASCII and Chinese rendered; lint has no errors; build documented | Final ARM64 packaging, phone verification by user |
 | M1 | Rust SSH driver and policy tests pass; Android/OpenSSH password login, host trust, PTY resize and I/O pass; original shell PID survives recreation, rotation and a short background interval with reconnect disabled | Broader tmux/Codex/git/nvim keyboard workflows |
-| M2 | Native paste negotiation, UTF-8, Ctrl/Alt, OSC 52 and dimensions pass on device; foreground-service lifecycle tested end to end | IME, paste in tmux, 30-minute background and lock, WLAN route/loss acceptance, secure persistence |
-| M3 | Not implemented | Profiles, credentials, reconnect, settings, editor, touch, clipboard, notification |
+| M2 | Native paste negotiation, UTF-8, Ctrl/Alt, OSC 52 and dimensions pass on device; foreground-service lifecycle tested end to end | IME, paste in tmux, 30-minute background and lock, secure persistence |
+| M3 | Notification return/disconnect and automatic reconnect are implemented; OSC 52 callback is wired | Profiles, credentials, settings, editor, full touch/mouse and clipboard workflows |
 | M4 | Not started | Full workflow acceptance and regression fixes |
 
 ## Decisions
@@ -40,4 +40,6 @@ A terminal demo is only M0; it does not satisfy the daily-use release requiremen
 - Strict WLAN socket/DNS route acceptance passed against the fixture using
   `10.0.2.2.nip.io`: a process-default cellular socket used `10.0.2.15`, while
   the explicit WLAN socket used `10.0.2.16`; both received OpenSSH banners.
-  Network-loss/recovery acceptance remains pending.
+  A separate WLAN-loss case also passes: cellular remains available while the
+  session waits, recovery starts a new shell PID, offline input is not replayed,
+  and explicit disconnect cancels future recovery.

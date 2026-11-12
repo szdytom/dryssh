@@ -14,6 +14,7 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import java.io.IOException
 import java.net.Socket
@@ -170,6 +171,7 @@ class SshService : Service() {
 		val newState = result.getString("state")
 		val previousState = policyState
 		policyState = newState
+		if (newState != previousState) Log.i("DrySSH", "Session state: $newState")
 		mutableState.value =
 			state.value.copy(
 				state = newState,
