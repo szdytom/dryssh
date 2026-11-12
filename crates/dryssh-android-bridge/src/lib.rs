@@ -216,3 +216,16 @@ fn transition<'local>(
 	let result = serde_json::json!({ "state": policy.state(), "generation": policy.generation(), "effects": effects, "policy": policy });
 	env.new_string(result.to_string())
 }
+
+export!(extern fn normalize_config(config: JString) -> JString,);
+fn normalize_config<'local>(
+	env: &mut Env<'local>,
+	_this: JObject<'local>,
+	config: JString<'local>,
+) -> Result<JString<'local>> {
+	let config: dryssh_core::config::Configuration =
+		serde_json::from_str(&config.try_to_string(env)?)
+			.map_err(|e| exception(env, &format!("Invalid configuration: {e}")))?;
+	config.validate().map_err(|e| exception(env, e))?;
+	env.new_string(serde_json::to_string(&config).unwrap())
+}

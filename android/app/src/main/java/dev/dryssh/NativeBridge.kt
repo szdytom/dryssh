@@ -6,6 +6,7 @@ object NativeBridge {
 	}
 
 	external fun version(): String
+	external fun normalizeConfig(config: String): String
 
 	external fun start(fd: Int, options: String): Long
 	external fun nextEvent(id: Long): ByteArray?

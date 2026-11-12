@@ -9,7 +9,8 @@ class ConnectionRequest(
 	val username: String,
 	val authentication: JSONObject,
 	val autoReconnect: Boolean = true,
-	val wlanOnly: Boolean = false
+	val wlanOnly: Boolean = false,
+	val profileId: String? = null
 ) {
 	val trustKey: String get() = "${host.lowercase()}:$port"
 }
