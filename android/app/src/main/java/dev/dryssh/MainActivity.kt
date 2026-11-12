@@ -165,6 +165,7 @@ private fun SessionScreen(
 	if (showEditor) EditorDialog(session) { showEditor = false }
 	if (showConnect) {
 		ConnectDialog(
+			session = session,
 			dismiss = { showConnect = false },
 			connect = {
 				showConnect = false
@@ -192,65 +193,4 @@ private fun SessionScreen(
 			dismissButton = { TextButton(onClick = { session.trust(false) }) { Text("Cancel") } }
 		)
 	}
-}
-
-@Composable
-private fun ConnectDialog(dismiss: () -> Unit, connect: (ConnectionRequest) -> Unit) {
-	var host by remember { mutableStateOf("") }
-	var port by remember { mutableStateOf("22") }
-	var user by remember { mutableStateOf("") }
-	var password by remember { mutableStateOf("") }
-	var autoReconnect by remember { mutableStateOf(true) }
-	var wlanOnly by remember { mutableStateOf(false) }
-	AlertDialog(
-		onDismissRequest = dismiss,
-		title = { Text("Connect to server") },
-		text = {
-			Column(
-				Modifier.verticalScroll(rememberScrollState()),
-				verticalArrangement = Arrangement.spacedBy(8.dp)
-			) {
-				OutlinedTextField(host, { host = it }, label = { Text("Host") }, singleLine = true)
-				OutlinedTextField(port, { port = it }, label = { Text("Port") }, singleLine = true)
-				OutlinedTextField(user, {
-					user = it
-				}, label = { Text("Username") }, singleLine = true)
-				OutlinedTextField(password, {
-					password = it
-				}, label = {
-					Text("Password")
-				}, singleLine = true, visualTransformation = PasswordVisualTransformation())
-				Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-					Text("Auto reconnect")
-					Switch(autoReconnect, { autoReconnect = it })
-				}
-				Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-					Text("WLAN only")
-					Switch(wlanOnly, { wlanOnly = it })
-				}
-			}
-		},
-		confirmButton = {
-			Button(
-				onClick = {
-					connect(
-						ConnectionRequest(
-							"$user@$host",
-							host.trim(),
-							port.toInt(),
-							user.trim(),
-							JSONObject().put("kind", "password").put("password", password),
-							autoReconnect,
-							wlanOnly
-						)
-					)
-				},
-				enabled =
-				host.isNotBlank() && user.isNotBlank() && (port.toIntOrNull() ?: 0) in 1..65535
-			) {
-				Text("Connect")
-			}
-		},
-		dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } }
-	)
 }

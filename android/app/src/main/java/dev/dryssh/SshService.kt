@@ -77,6 +77,8 @@ class SshService : Service() {
 	private var policy = ""
 	private var policyState = "idle"
 	private var request: ConnectionRequest? = null
+	val currentProfileId: String? get() = request?.profileId
+	val repository get() = (application as DrySshApplication).repository
 	private var attempt: Attempt? = null
 	private lateinit var network: NetworkAccess
 	private lateinit var wakeLock: PowerManager.WakeLock
@@ -108,8 +110,7 @@ class SshService : Service() {
 		).createNotificationChannel(
 			NotificationChannel("session", "SSH connection", NotificationManager.IMPORTANCE_LOW)
 		)
-		val banner = "DrySSH ${NativeBridge.version()}\r\n\r\n" +
-			"ASCII / 中文终端\r\nChoose Connect to open a shell.\r\n"
+		val banner = "DrySSH\r\n\r\nChoose Connect to open a shell.\r\n"
 		terminal.writeInput(banner.toByteArray())
 		network = NetworkAccess(
 			this,
@@ -134,7 +135,7 @@ class SshService : Service() {
 	// The foreground session owns the wake lock until `disconnect`.
 	@SuppressLint("WakelockTimeout")
 	fun connect(value: ConnectionRequest) {
-		terminal.clearScreen()
+		disconnect()
 		request = value
 		mutableState.value = UiState(name = value.name, detail = "Connecting")
 		startService(Intent(this, SshService::class.java))
@@ -165,6 +166,11 @@ class SshService : Service() {
 		if (accept) trusted.edit().putString(request!!.trustKey, key.fingerprint).apply()
 		mutableState.value = state.value.copy(hostKey = null)
 		NativeBridge.trust(current.nativeId, accept)
+	}
+
+	fun forgetHostKey(host: String, port: Int) {
+		if (request?.trustKey == "${host.lowercase()}:$port") disconnect()
+		trusted.edit().remove("${host.lowercase()}:$port").apply()
 	}
 
 	fun updateDraft(text: String) {
@@ -235,6 +241,7 @@ class SshService : Service() {
 	}
 
 	private fun startAttempt(generation: Long) {
+		terminal.writeInput("\u001b[?1049l\u001bc".toByteArray())
 		val target = request!!
 		val current = Attempt(generation, if (target.wlanOnly) network.selectedWlan() else null)
 		attempt = current

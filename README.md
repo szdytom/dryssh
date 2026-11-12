@@ -4,8 +4,8 @@ A terminal-first Android SSH client, optimized for an external keyboard.
 
 This is under active development. Password SSH, host-key trust, automatic
 reconnect, strict WLAN transport and foreground sessions are implemented.
-Profiles, persistent credentials and the remaining daily-use tools are still
-being built. See [delivery status](docs/progress.md) for acceptance evidence.
+Saved profiles, encrypted credentials and the local editor are implemented;
+the remaining daily-use tools are still being built. See [delivery status](docs/progress.md) for acceptance evidence.
 
 ## Build
 
@@ -73,3 +73,11 @@ The `nip.io` name is only a test DNS convenience, not an app dependency.
 a case. Tests with no SSH fixture argument skip SSH scenarios; the harness
 rejects any skipped case when `--ssh-host` is supplied. Reports, logcat and a
 screenshot are retained under `artifacts/android/<serial>/`.
+
+Saved credentials use an independent `CredentialStore` interface. Android stores
+AES-256-GCM ciphertext in `noBackupFilesDir`, with the key in Android Keystore.
+Configuration contains references only; private keys and passphrases are encrypted
+together. No plaintext fallback is used if Keystore fails. Clearing app data or
+uninstalling removes saved connections; backup/export is outside this release.
+The fixture's encrypted Ed25519 key and its passphrase (`dryssh-key-test`) are
+public test credentials, authorized only by the isolated fixture image.
