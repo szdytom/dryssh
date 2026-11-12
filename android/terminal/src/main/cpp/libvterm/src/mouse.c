@@ -97,3 +97,9 @@ void vterm_mouse_button(VTerm *vt, int button, bool pressed, VTermModifier mod)
     output_mouse(state, button-4 + 0x40, pressed, mod, state->mouse_col, state->mouse_row);
   }
 }
+
+int vterm_mouse_get_mode(const VTerm *vt)
+{
+  const VTermState *state = vt->state;
+  return (state->mouse_flags ? 1 : 0) | (state->mode.alt_screen ? 2 : 0) | (state->mode.alt_scroll ? 4 : 0);
+}

@@ -207,6 +207,10 @@ internal class TerminalNative(callbacks: TerminalCallbacks) : AutoCloseable {
 
     fun isBracketedPasteEnabled(): Boolean = withNative { nativeIsBracketedPasteEnabled(nativePtr) }
 
+    fun pointerInput(row: Int, col: Int, lines: Int): Boolean = withNative { nativePointerInput(nativePtr, checkNotNull(callbacks), row, col, lines) }
+
+    private external fun nativePointerInput(ptr: Long, callbacks: TerminalCallbacks, row: Int, col: Int, lines: Int): Boolean
+
     fun pasteText(data: ByteArray) = withNative { nativePaste(nativePtr, checkNotNull(callbacks), data) }
     private external fun nativeGetCells(ptr: Long, callbacks: TerminalCallbacks, buffer: ByteBuffer, requests: Int): Int
     private external fun nativeSetPaletteColors(ptr: Long, callbacks: TerminalCallbacks, colors: IntArray, count: Int): Int

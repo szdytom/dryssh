@@ -397,6 +397,30 @@ bool Terminal::isBracketedPasteEnabled() {
     return vterm_keyboard_get_bracketed_paste(mVt);
 }
 
+bool Terminal::pointerInput(int row, int col, int lines) {
+    std::scoped_lock lock(mLock);
+    const int mode = vterm_mouse_get_mode(mVt);
+    if (mode & 1) {
+        int rows, cols;
+        vterm_get_size(mVt, &rows, &cols);
+        vterm_mouse_move(mVt, std::clamp(row, 0, rows - 1), std::clamp(col, 0, cols - 1), VTERM_MOD_NONE);
+        if (lines == 0) {
+            vterm_mouse_button(mVt, 1, true, VTERM_MOD_NONE);
+            vterm_mouse_button(mVt, 1, false, VTERM_MOD_NONE);
+        } else {
+            for (int i = 0; i < std::abs(lines); ++i)
+                vterm_mouse_button(mVt, lines > 0 ? 4 : 5, true, VTERM_MOD_NONE);
+        }
+        return true;
+    }
+    if (lines != 0 && (mode & 6) == 6) {
+        for (int i = 0; i < std::abs(lines); ++i)
+            vterm_keyboard_key(mVt, lines > 0 ? VTERM_KEY_UP : VTERM_KEY_DOWN, VTERM_MOD_NONE);
+        return true;
+    }
+    return false;
+}
+
 // Keyboard input handlers
 void Terminal::paste(JNIEnv* env, jbyteArray data) {
     std::scoped_lock lock(mLock);
@@ -1122,6 +1146,13 @@ Java_org_connectbot_terminal_TerminalNative_nativeDispatchCharacter(JNIEnv* env,
 JNIEXPORT jboolean JNICALL
 Java_org_connectbot_terminal_TerminalNative_nativeIsBracketedPasteEnabled(JNIEnv*, jobject, jlong ptr) {
     return reinterpret_cast<Terminal*>(ptr)->isBracketedPasteEnabled();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_org_connectbot_terminal_TerminalNative_nativePointerInput(JNIEnv* env, jobject, jlong ptr, jobject callbacks, jint row, jint col, jint lines) {
+    auto* term = reinterpret_cast<Terminal*>(ptr);
+    Terminal::CallbackScope scope(*term, env, callbacks);
+    return term->pointerInput(row, col, lines);
 }
 
 JNIEXPORT void JNICALL

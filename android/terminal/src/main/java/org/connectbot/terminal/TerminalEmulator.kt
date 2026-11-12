@@ -98,6 +98,9 @@ sealed interface TerminalEmulator : AutoCloseable {
     /** Atomically require bracketed paste; refusal leaves the transport untouched. */
     fun pasteTextIfBracketed(text: String): Boolean
 
+    /** Report a click (`lines == 0`) or scroll; false requests local handling. */
+    fun pointerInput(row: Int, col: Int, lines: Int = 0): Boolean
+
     /** Policy controlling whether incoming inline image commands are accepted. */
     val inlineImages: InlineImages
 
@@ -698,6 +701,14 @@ internal class TerminalEmulatorImpl(
             checkNotClosed()
             terminalNative.isBracketedPasteEnabled()
         }
+
+    override fun pointerInput(row: Int, col: Int, lines: Int): Boolean = commands.call {
+        synchronized(damageLock) {
+            var handled = false
+            batchOutput { handled = terminalNative.pointerInput(row, col, lines.coerceIn(-100, 100)) }
+            handled
+        }
+    }
 
     override fun pasteTextIfBracketed(text: String): Boolean = commands.call {
         synchronized(damageLock) {

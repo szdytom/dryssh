@@ -81,6 +81,7 @@ public:
     bool dispatchKey(int modifiers, int key);
     void paste(JNIEnv* env, jbyteArray data);
     bool isBracketedPasteEnabled();
+    bool pointerInput(int row, int col, int lines);
     bool dispatchCharacter(int modifiers, int codepoint);
 
     // Cell data retrieval for rendering

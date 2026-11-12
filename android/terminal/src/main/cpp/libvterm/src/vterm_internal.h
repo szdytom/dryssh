@@ -122,6 +122,7 @@ struct VTermState
     unsigned int screen:1;
     unsigned int leftrightmargin:1;
     unsigned int bracketpaste:1;
+    unsigned int alt_scroll:1;
     unsigned int report_focus:1;
   } mode;
 

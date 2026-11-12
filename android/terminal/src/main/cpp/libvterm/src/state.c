@@ -821,6 +821,10 @@ static void set_dec_mode(VTermState *state, int num, int val)
     state->mouse_protocol = val ? MOUSE_SGR : MOUSE_X10;
     break;
 
+  case 1007:
+    state->mode.alt_scroll = val;
+    break;
+
   case 1015:
     state->mouse_protocol = val ? MOUSE_RXVT : MOUSE_X10;
     break;
@@ -2124,9 +2128,12 @@ void vterm_state_reset(VTermState *state, int hard)
   state->mode.origin          = 0;
   state->mode.leftrightmargin = 0;
   state->mode.bracketpaste    = 0;
+  state->mode.alt_scroll      = 1;
   state->mode.report_focus    = 0;
 
   state->mouse_flags = 0;
+  state->mouse_protocol = MOUSE_X10;
+  state->mouse_buttons = 0;
 
   state->vt->mode.ctrl8bit   = 0;
 

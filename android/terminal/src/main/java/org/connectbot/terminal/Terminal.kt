@@ -91,6 +91,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -331,12 +332,15 @@ fun Terminal(
     showSoftKeyboard: Boolean = true,
     focusRequester: FocusRequester = remember { FocusRequester() },
     onTerminalTap: () -> Unit = {},
+    onTerminalLongPress: (() -> Unit)? = null,
+    localHistory: Boolean = false,
     onImeVisibilityChanged: (Boolean) -> Unit = {},
     forcedSize: Pair<Int, Int>? = null,
     modifierManager: ModifierManager? = null,
     onSelectionControllerAvailable: ((SelectionController) -> Unit)? = null,
     onHyperlinkClick: (String) -> Unit = {},
     onComposeControllerAvailable: ((ComposeController) -> Unit)? = null,
+    onScrollControllerAvailable: ((ScrollController) -> Unit)? = null,
     onPasteRequest: (() -> Unit)? = null,
     rightAltMode: RightAltMode = RightAltMode.CharacterModifier,
     delKeyMode: DelKeyMode = DelKeyMode.Delete,
@@ -362,13 +366,15 @@ fun Terminal(
         showSoftKeyboard = showSoftKeyboard,
         focusRequester = focusRequester,
         onTerminalTap = onTerminalTap,
+        onTerminalLongPress = onTerminalLongPress,
+        localHistory = localHistory,
         onImeVisibilityChanged = onImeVisibilityChanged,
         forcedSize = forcedSize,
         modifierManager = modifierManager,
         onSelectionControllerAvailable = onSelectionControllerAvailable,
         onHyperlinkClick = onHyperlinkClick,
         onComposeControllerAvailable = onComposeControllerAvailable,
-        onScrollControllerAvailable = null,
+        onScrollControllerAvailable = onScrollControllerAvailable,
         onPasteRequest = onPasteRequest,
         onInterceptKey = onInterceptKey,
         rightAltMode = rightAltMode,
@@ -401,6 +407,8 @@ internal fun TerminalWithAccessibility(
     showSoftKeyboard: Boolean = true,
     focusRequester: FocusRequester = remember { FocusRequester() },
     onTerminalTap: () -> Unit = {},
+    onTerminalLongPress: (() -> Unit)? = null,
+    localHistory: Boolean = false,
     onImeVisibilityChanged: (Boolean) -> Unit = {},
     forcedSize: Pair<Int, Int>? = null,
     modifierManager: ModifierManager? = null,
@@ -432,6 +440,8 @@ internal fun TerminalWithAccessibility(
     // Remember updated callbacks to avoid stale lambdas inside pointerInput
     val currentOnPageGesture by rememberUpdatedState(onPageGesture)
     val currentOnTerminalTap by rememberUpdatedState(onTerminalTap)
+    val currentOnTerminalLongPress by rememberUpdatedState(onTerminalLongPress)
+    val currentLocalHistory by rememberUpdatedState(localHistory)
     val currentOnHyperlinkClick by rememberUpdatedState(onHyperlinkClick)
     val currentOnInterceptKey by rememberUpdatedState(onInterceptKey)
     val currentKeyboardEnabled by rememberUpdatedState(keyboardEnabled)
@@ -1049,6 +1059,25 @@ internal fun TerminalWithAccessibility(
                     Modifier.fillMaxSize()
                 }
                 ).pointerInput(terminalEmulator, baseCharWidth, baseCharHeight) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type == PointerEventType.Scroll) {
+                            val change = event.changes.first()
+                            val lines = (-change.scrollDelta.y * 3).toInt()
+                            if (lines != 0) {
+                                if (currentLocalHistory || selectionManager.mode != SelectionMode.NONE ||
+                                    !terminalEmulator.pointerInput((change.position.y / baseCharHeight).toInt(), (change.position.x / baseCharWidth).toInt(), lines)
+                                ) {
+                                    screenState.scrollBy(lines)
+                                    scope.launch { scrollOffset.snapTo(screenState.scrollbackPosition * baseCharHeight) }
+                                }
+                                change.consume()
+                            }
+                        }
+                    }
+                }
+            }.pointerInput(terminalEmulator, baseCharWidth, baseCharHeight) {
                 val touchSlopSquared =
                     viewConfiguration.touchSlop * viewConfiguration.touchSlop
                 var scrollJob: Job? = null
@@ -1130,7 +1159,7 @@ internal fun TerminalWithAccessibility(
                         val isDoubleTap = (down.uptimeMillis - tapTracker.lastTimestamp) < viewConfiguration.doubleTapTimeoutMillis &&
                             (down.position - tapTracker.lastPosition).getDistanceSquared() < touchSlopSquared
 
-                        if (isDoubleTap) {
+                        if (isDoubleTap && currentOnTerminalLongPress == null) {
                             gestureType = GestureType.Selection
                             val target = selectionPoint(down.position)
                             val tapCol = (target.x / baseCharWidth).toInt()
@@ -1291,11 +1320,16 @@ internal fun TerminalWithAccessibility(
                                 delay(viewConfiguration.longPressTimeoutMillis)
                                 // Only trigger long press if gesture is still undetermined AND still in progress
                                 if (gestureType == GestureType.Undetermined &&
-                                    selectionManager.mode == SelectionMode.NONE &&
+                                    (currentOnTerminalLongPress != null || selectionManager.mode == SelectionMode.NONE) &&
                                     !gestureEnded
                                 ) {
                                     longPressDetected = true
                                     gestureType = GestureType.Selection
+
+                                    if (currentOnTerminalLongPress != null) {
+                                        currentOnTerminalLongPress?.invoke()
+                                        return@launch
+                                    }
 
                                     // Start selection
                                     val target = selectionPoint(down.position)
@@ -1338,6 +1372,8 @@ internal fun TerminalWithAccessibility(
                         var initialScrollOffset = 0f
                         var singleTouch = true
                         var pendingPageDrag = 0f
+                        var remoteScroll = false
+                        var reportedScrollLines = 0
                         val pagingCandidate = currentOnPageGesture != null &&
                             down.position.x <= size.width / 3f &&
                             selectionManager.mode == SelectionMode.NONE
@@ -1430,6 +1466,19 @@ internal fun TerminalWithAccessibility(
                                     }
 
                                     GestureType.Scroll -> {
+                                        val lines = (panAccumulator.y / baseCharHeight).toInt()
+                                        val delta = lines - reportedScrollLines
+                                        if (!currentLocalHistory && selectionManager.mode == SelectionMode.NONE && delta != 0 &&
+                                            terminalEmulator.pointerInput((down.position.y / baseCharHeight).toInt(), (down.position.x / baseCharWidth).toInt(), delta)
+                                        ) {
+                                            reportedScrollLines = lines
+                                            remoteScroll = true
+                                        }
+                                        if (remoteScroll) {
+                                            if (event.changes.all { !it.pressed }) break
+                                            change.consume()
+                                            continue
+                                        }
                                         // Update scroll offset using total pan from the start of the gesture
                                         // to avoid stuttering from stale scrollOffset.value.
                                         val currentMaxScroll =
@@ -1516,6 +1565,7 @@ internal fun TerminalWithAccessibility(
                         // 6. Handle the completed gesture
                         when (gestureType) {
                             GestureType.Scroll -> {
+                                if (remoteScroll) return@awaitEachGesture
                                 // Apply fling animation
                                 val velocity = velocityTracker.calculateVelocity()
                                 scrollJob?.cancel()
@@ -1544,6 +1594,12 @@ internal fun TerminalWithAccessibility(
                             }
 
                             GestureType.Undetermined -> {
+                                if (!currentLocalHistory && selectionManager.mode == SelectionMode.NONE &&
+                                    terminalEmulator.pointerInput((down.position.y / baseCharHeight).toInt(), (down.position.x / baseCharWidth).toInt())
+                                ) {
+                                    tapTracker.lastTimestamp = 0L
+                                    return@awaitEachGesture
+                                }
                                 // This is a tap. If a selection is active, clear it.
                                 // Otherwise, check for hyperlink or forward the tap.
                                 if (selectionManager.mode != SelectionMode.NONE) {
