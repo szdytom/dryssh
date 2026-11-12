@@ -6,13 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,6 +51,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.io.File
 import org.connectbot.terminal.Terminal
 import org.connectbot.terminal.VTermKey
 import org.json.JSONObject
@@ -108,6 +112,23 @@ private fun SessionScreen(
 		configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
 	var keyboard by remember(hardwareKeyboard) { mutableStateOf(!hardwareKeyboard) }
 	var showConnect by remember { mutableStateOf(false) }
+	var showSettings by remember { mutableStateOf(false) }
+	val config by session.repository.config.collectAsState()
+	val settings = remember(config) { JSONObject(config).getJSONObject("settings") }
+	val fontResult = remember(settings.optString("font_ref")) {
+		runCatching {
+			if (settings.isNull(
+					"font_ref"
+				)
+			) {
+				Typeface.MONOSPACE
+			} else {
+				Typeface.createFromFile(
+					File(session.repository.fonts, settings.getString("font_ref"))
+				)
+			}
+		}
+	}
 	var showEditor by rememberSaveable { mutableStateOf(false) }
 	var stayAwake by remember { mutableStateOf(true) }
 	val view = LocalView.current
@@ -139,12 +160,33 @@ private fun SessionScreen(
 				modifier = Modifier.weight(1f).fillMaxWidth(),
 				keyboardEnabled = true,
 				showSoftKeyboard = keyboard,
-				initialFontSize = 14.sp,
-				backgroundColor = Color(0xFF101A25),
-				foregroundColor = Color(0xFFD4DFE9)
+				initialFontSize = settings.getDouble("font_size").toFloat().sp,
+				typeface = fontResult.getOrDefault(Typeface.MONOSPACE),
+				maxFontSize = 40.sp,
+				backgroundColor = Color(settings.getLong("background").toInt()),
+				foregroundColor = Color(settings.getLong("foreground").toInt()),
+				onInterceptKey = { event ->
+					val action = TerminalActions.matches(event.nativeKeyEvent, settings.getJSONArray("bindings"))
+					if (action != null && !showEditor && !showConnect && !showSettings) {
+						if (event.nativeKeyEvent.action ==
+							KeyEvent.ACTION_DOWN
+						) {
+							TerminalActions.perform(action, session.terminal) { showEditor = true }
+						}
+						true
+					} else {
+						false
+					}
+				}
 			)
-			Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-				if (!hardwareKeyboard || keyboard) {
+			if (fontResult.isFailure) {
+				Text(
+					"Cannot load imported font. Select another font in Settings.",
+					color = MaterialTheme.colorScheme.error
+				)
+			}
+			if (!hardwareKeyboard || keyboard) {
+				Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
 					TextButton(onClick = {
 						session.terminal.dispatchKey(0, VTermKey.ESCAPE)
 					}) { Text("Esc") }
@@ -154,7 +196,25 @@ private fun SessionScreen(
 					TextButton(onClick = {
 						session.terminal.dispatchCharacter(4, 'c'.code)
 					}) { Text("Ctrl-C") }
+					val actions = settings.getJSONArray("quick_actions")
+					for (i in 0 until actions.length()) {
+						val action = actions.getJSONObject(i)
+						if (action.getString("name") == "Editor" &&
+							action.getJSONObject("action").getString("kind") == "editor"
+						) {
+							continue
+						}
+						TextButton(onClick = {
+							TerminalActions.perform(action.getJSONObject("action"), session.terminal) {
+								showEditor =
+									true
+							}
+						}) { Text(action.getString("name")) }
+					}
 				}
+			}
+			Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+				TextButton(onClick = { showSettings = true }) { Text("Settings") }
 				TextButton(onClick = { keyboard = !keyboard }) { Text("Keyboard") }
 				TextButton(onClick = {
 					stayAwake = !stayAwake
@@ -162,6 +222,7 @@ private fun SessionScreen(
 			}
 		}
 	}
+	if (showSettings) SettingsDialog(session.repository) { showSettings = false }
 	if (showEditor) EditorDialog(session) { showEditor = false }
 	if (showConnect) {
 		ConnectDialog(

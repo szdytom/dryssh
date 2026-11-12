@@ -110,6 +110,18 @@ class SshService : Service() {
 		).createNotificationChannel(
 			NotificationChannel("session", "SSH connection", NotificationManager.IMPORTANCE_LOW)
 		)
+		scope.launch {
+			repository.config.collect { config ->
+				val settings = JSONObject(config).getJSONObject("settings")
+				terminal.applyColorScheme(
+					IntArray(16) {
+						settings.getJSONArray("ansi").getLong(it).toInt()
+					},
+					settings.getLong("foreground").toInt(),
+					settings.getLong("background").toInt()
+				)
+			}
+		}
 		val banner = "DrySSH\r\n\r\nChoose Connect to open a shell.\r\n"
 		terminal.writeInput(banner.toByteArray())
 		network = NetworkAccess(
