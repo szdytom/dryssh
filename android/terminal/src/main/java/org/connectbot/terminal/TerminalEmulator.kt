@@ -92,6 +92,12 @@ sealed interface TerminalEmulator : AutoCloseable {
     /** Queue pasted text in the same FIFO as keyboard/IME input, honoring bracketed paste. */
     fun pasteText(text: String)
 
+    /** Negotiated mode from the terminal kernel. */
+    val bracketedPasteEnabled: Boolean
+
+    /** Atomically require bracketed paste; refusal leaves the transport untouched. */
+    fun pasteTextIfBracketed(text: String): Boolean
+
     /** Policy controlling whether incoming inline image commands are accepted. */
     val inlineImages: InlineImages
 
@@ -684,6 +690,21 @@ internal class TerminalEmulatorImpl(
                 checkNotClosed()
                 terminalNative.dispatchCharacter(modifiers, codepoint)
             }
+        }
+    }
+
+    override val bracketedPasteEnabled: Boolean
+        get() = synchronized(damageLock) {
+            checkNotClosed()
+            terminalNative.isBracketedPasteEnabled()
+        }
+
+    override fun pasteTextIfBracketed(text: String): Boolean = commands.call {
+        synchronized(damageLock) {
+            checkNotClosed()
+            if (!terminalNative.isBracketedPasteEnabled()) return@call false
+            batchOutput { terminalNative.pasteText(text.toByteArray(Charsets.UTF_8)) }
+            true
         }
     }
 

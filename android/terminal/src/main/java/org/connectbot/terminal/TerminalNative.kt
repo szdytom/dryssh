@@ -203,6 +203,9 @@ internal class TerminalNative(callbacks: TerminalCallbacks) : AutoCloseable {
     private external fun nativeDispatchKey(ptr: Long, callbacks: TerminalCallbacks, modifiers: Int, key: Int): Boolean
     private external fun nativeDispatchCharacter(ptr: Long, callbacks: TerminalCallbacks, modifiers: Int, character: Int): Boolean
     private external fun nativePaste(ptr: Long, callbacks: TerminalCallbacks, data: ByteArray)
+    private external fun nativeIsBracketedPasteEnabled(ptr: Long): Boolean
+
+    fun isBracketedPasteEnabled(): Boolean = withNative { nativeIsBracketedPasteEnabled(nativePtr) }
 
     fun pasteText(data: ByteArray) = withNative { nativePaste(nativePtr, checkNotNull(callbacks), data) }
     private external fun nativeGetCells(ptr: Long, callbacks: TerminalCallbacks, buffer: ByteBuffer, requests: Int): Int

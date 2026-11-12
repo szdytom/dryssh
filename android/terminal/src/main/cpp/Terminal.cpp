@@ -392,6 +392,11 @@ int Terminal::setDefaultColors(uint32_t fgColor, uint32_t bgColor) {
     return 0;
 }
 
+bool Terminal::isBracketedPasteEnabled() {
+    std::scoped_lock lock(mLock);
+    return vterm_keyboard_get_bracketed_paste(mVt);
+}
+
 // Keyboard input handlers
 void Terminal::paste(JNIEnv* env, jbyteArray data) {
     std::scoped_lock lock(mLock);
@@ -1112,6 +1117,11 @@ Java_org_connectbot_terminal_TerminalNative_nativeDispatchCharacter(JNIEnv* env,
     auto* term = reinterpret_cast<Terminal*>(ptr);
     Terminal::CallbackScope scope(*term, env, callbacks);
     return term->dispatchCharacter(modifiers, character);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_org_connectbot_terminal_TerminalNative_nativeIsBracketedPasteEnabled(JNIEnv*, jobject, jlong ptr) {
+    return reinterpret_cast<Terminal*>(ptr)->isBracketedPasteEnabled();
 }
 
 JNIEXPORT void JNICALL

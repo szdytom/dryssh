@@ -18,3 +18,8 @@ The Apache-2.0 license is in `LICENSE`; libvterm retains its own MIT license.
   its existing behavior. Regression: `ImeIntegrationTest` drives the actual Android
   input connection through OpenSSH, including composition replacement, consecutive
   speech commits, deletion, finish and a following Ctrl shortcut.
+
+- `keyboard.c` / `vterm.h`, terminal JNI and emulator API: expose the kernel's
+  bracketed-paste flag and an atomic guarded paste. A rejected guarded paste
+  emits no bytes. Regression: `TerminalIntegrationTest` covers split negotiation,
+  mode changes, exact multiline framing and refusal with the mode disabled.

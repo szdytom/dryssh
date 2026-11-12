@@ -220,6 +220,11 @@ void vterm_keyboard_key(VTerm *vt, VTermKey key, VTermModifier mod)
   }
 }
 
+int vterm_keyboard_get_bracketed_paste(const VTerm *vt)
+{
+  return vt->state->mode.bracketpaste;
+}
+
 void vterm_keyboard_start_paste(VTerm *vt)
 {
   if(vt->state->mode.bracketpaste)

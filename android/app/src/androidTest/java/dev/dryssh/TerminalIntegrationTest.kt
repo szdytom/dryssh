@@ -4,10 +4,12 @@ import android.os.Looper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.ByteArrayOutputStream
+import kotlin.concurrent.thread
 import org.connectbot.terminal.TerminalEmulator
 import org.connectbot.terminal.TerminalEmulatorFactory
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,13 +47,46 @@ class TerminalIntegrationTest {
 
 	@Test
 	fun pasteHonorsNegotiatedModeAndNeverAddsReturn() {
-		terminal.writeInput("\u001b[?2004h".toByteArray())
-		terminal.pasteText("中文\nsecond line")
+		assertFalse(terminal.bracketedPasteEnabled)
+		terminal.writeInput("\u001b[?20".toByteArray())
+		assertFalse(terminal.bracketedPasteEnabled)
+		terminal.writeInput("04h".toByteArray())
+		assertTrue(terminal.bracketedPasteEnabled)
+		assertTrue(terminal.pasteTextIfBracketed("中文\nsecond line"))
 		awaitOutput("\u001b[200~中文\nsecond line\u001b[201~")
 		synchronized(output) { output.reset() }
 		terminal.writeInput("\u001b[?2004l".toByteArray())
+		assertFalse(terminal.bracketedPasteEnabled)
+		assertFalse(terminal.pasteTextIfBracketed("keep\nthis draft"))
+		assertEquals(0, synchronized(output) { output.size() })
 		terminal.pasteText("中文")
 		awaitOutput("中文")
+	}
+
+	@Test
+	fun protectedPasteNeverLeaksUnframedTextDuringModeChanges() {
+		terminal.writeInput("\u001b[?2004h".toByteArray())
+		var accepted = if (terminal.pasteTextIfBracketed("one\ntwo")) 1 else 0
+		val changingMode = thread {
+			repeat(200) {
+				terminal.writeInput(
+					(
+						if (it % 2 ==
+							0
+						) {
+							"\u001b[?2004l"
+						} else {
+							"\u001b[?2004h"
+						}
+						).toByteArray()
+				)
+				Thread.sleep(1)
+			}
+		}
+		repeat(500) { if (terminal.pasteTextIfBracketed("one\ntwo")) accepted++ }
+		changingMode.join()
+		assertTrue(accepted > 0)
+		awaitOutput("\u001b[200~one\ntwo\u001b[201~".repeat(accepted))
 	}
 
 	@Test

@@ -368,6 +368,7 @@ size_t vterm_output_read(VTerm *vt, char *buffer, size_t len);
 void vterm_keyboard_unichar(VTerm *vt, uint32_t c, VTermModifier mod);
 void vterm_keyboard_key(VTerm *vt, VTermKey key, VTermModifier mod);
 
+int vterm_keyboard_get_bracketed_paste(const VTerm *vt);
 void vterm_keyboard_start_paste(VTerm *vt);
 void vterm_keyboard_end_paste(VTerm *vt);
 
