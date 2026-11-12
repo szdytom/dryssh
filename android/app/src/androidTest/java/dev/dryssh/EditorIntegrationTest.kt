@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
@@ -59,7 +60,7 @@ class EditorIntegrationTest {
 					androidx.compose.ui.test.hasText("Editor")
 				).fetchSemanticsNodes().isNotEmpty()
 			}
-			compose.onNodeWithText("Editor").performClick()
+			compose.onNodeWithContentDescription("Editor").performClick()
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
 			val draft = "本地草稿\nkept until explicitly pasted"
 			instrumentation.runOnMainSync { editor().setText(draft) }
@@ -91,7 +92,7 @@ class EditorIntegrationTest {
 			}
 			val draft = "printf '%s%s\\n' 'https://example.' 'org/plain-first'\n" +
 				"printf '%s%s\\n' 'https://example.' 'org/plain-second'"
-			compose.onNodeWithText("Editor").performClick()
+			compose.onNodeWithContentDescription("Editor").performClick()
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
 			fixture.instrumentation.runOnMainSync { editor().setText(draft) }
 			compose.onNodeWithText("Paste").assertIsNotEnabled()
@@ -99,7 +100,7 @@ class EditorIntegrationTest {
 			compose.onNodeWithText("Keep draft").performClick()
 			fixture.activity.recreate()
 			assertEquals(draft, fixture.service.draft.value)
-			compose.onNodeWithText("Editor").performClick()
+			compose.onNodeWithContentDescription("Editor").performClick()
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
 			fixture.instrumentation.runOnMainSync { assertEquals(draft, editor().text.toString()) }
 			compose.onNodeWithText("Plain paste").performClick()
@@ -144,12 +145,12 @@ class EditorIntegrationTest {
 			}
 			fixture.awaitCondition { fixture.service.terminal.bracketedPasteEnabled }
 			val draft = "第一行\n  第二行"
-			compose.onNodeWithText("Editor").performClick()
+			compose.onNodeWithContentDescription("Editor").performClick()
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
 			fixture.instrumentation.runOnMainSync { editor().setText(draft) }
 			compose.onNodeWithText("Paste").assertIsEnabled().performClick()
 			compose.onNodeWithText("Local editor").assertDoesNotExist()
-			compose.onNodeWithText("Keyboard").performClick()
+			compose.onNodeWithContentDescription("Keyboard").performClick()
 			compose.onNodeWithText("Esc").performClick()
 			keys(fixture, ":wq")
 			fixture.awaitCondition { fixture.service.terminal.getUrls().any { it.url == ready } }

@@ -16,42 +16,60 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
@@ -113,6 +131,26 @@ private fun SessionScreen(
 ) {
 	val state by session.state.collectAsState()
 	val configuration = LocalConfiguration.current
+	val landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+	var showActions by remember { mutableStateOf(false) }
+	var showOptions by remember { mutableStateOf(false) }
+	val snackbar = remember { SnackbarHostState() }
+	LaunchedEffect(state.state, state.detail, landscape) {
+		if (landscape &&
+			(
+				state.state == "idle" && state.detail !in listOf("Disconnected", "Connecting") || state.state in
+					listOf(
+						"authentication_failed",
+						"host_key_failed",
+						"waiting_wlan",
+						"waiting_network",
+						"retry_pending"
+					)
+				)
+		) {
+			snackbar.showSnackbar(state.detail)
+		}
+	}
 	val hardwareKeyboard = configuration.keyboard != Configuration.KEYBOARD_NOKEYS &&
 		configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
 	var keyboard by remember(hardwareKeyboard) { mutableStateOf(!hardwareKeyboard) }
@@ -172,107 +210,215 @@ private fun SessionScreen(
 				scroll?.scrollToBottom()
 				selection?.clearSelection()
 			}
+
 			selection?.isSelectionActive == true -> selection?.clearSelection()
+
 			else -> background()
 		}
 	}
-	Surface(Modifier.fillMaxSize()) {
-		Column(Modifier.safeDrawingPadding()) {
-			Row(
-				Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-				horizontalArrangement = Arrangement.spacedBy(4.dp)
+	val viewport: @Composable (Modifier) -> Unit = { viewportModifier ->
+		Terminal(
+			terminalEmulator = session.terminal,
+			modifier = viewportModifier.testTag("terminal"),
+			onTerminalLongPress = { showMenu = true },
+			localHistory = localHistory,
+			onSelectionControllerAvailable = { selection = it },
+			onScrollControllerAvailable = { scroll = it },
+			onPasteRequest = ::pasteClipboard,
+			keyboardEnabled = true,
+			showSoftKeyboard = keyboard,
+			initialFontSize = settings.getDouble("font_size").toFloat().sp,
+			typeface = fontResult.getOrDefault(Typeface.MONOSPACE),
+			maxFontSize = 40.sp,
+			backgroundColor = Color(settings.getLong("background").toInt()),
+			foregroundColor = Color(settings.getLong("foreground").toInt()),
+			onInterceptKey = { event ->
+				val action = TerminalActions.matches(event.nativeKeyEvent, settings.getJSONArray("bindings"))
+				if (action != null && !showEditor && !showConnect && !showSettings && !showMenu) {
+					if (event.nativeKeyEvent.action ==
+						KeyEvent.ACTION_DOWN
+					) {
+						TerminalActions.perform(action, session.terminal) { showEditor = true }
+					}
+					true
+				} else {
+					false
+				}
+			}
+		)
+	}
+	fun returnToLive() {
+		localHistory = false
+		scroll?.scrollToBottom()
+		selection?.clearSelection()
+	}
+	val auxiliary: @Composable (Boolean) -> Unit = { menu ->
+		val sendKey: (Int) -> Unit = {
+			session.terminal.dispatchKey(0, it)
+			showActions = false
+		}
+		if (menu) {
+			DropdownMenuItem(text = { Text("Esc") }, onClick = { sendKey(VTermKey.ESCAPE) })
+			DropdownMenuItem(text = { Text("Tab") }, onClick = { sendKey(VTermKey.TAB) })
+			DropdownMenuItem(text = { Text("Ctrl-C") }, onClick = {
+				session.terminal.dispatchCharacter(4, 'c'.code)
+				showActions =
+					false
+			})
+		} else {
+			TextButton(onClick = { sendKey(VTermKey.ESCAPE) }) { Text("Esc") }
+			TextButton(onClick = { sendKey(VTermKey.TAB) }) { Text("Tab") }
+			TextButton(onClick = { session.terminal.dispatchCharacter(4, 'c'.code) }) { Text("Ctrl-C") }
+		}
+		val actions = settings.getJSONArray("quick_actions")
+		for (i in 0 until actions.length()) {
+			val action = actions.getJSONObject(i)
+			if (action.getString("name") == "Editor" &&
+				action.getJSONObject("action").getString("kind") == "editor"
 			) {
-				Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-					Text(state.name, style = MaterialTheme.typography.titleMedium)
-					Text(state.detail, style = MaterialTheme.typography.labelSmall, maxLines = 2)
-				}
-				TextButton(onClick = { showConnect = true }) { Text("Connect") }
-				TextButton(onClick = { showEditor = true }) { Text("Editor") }
-				if (state.state !=
-					"idle"
-				) {
-					TextButton(onClick = session::disconnect) { Text("Disconnect") }
-				}
+				continue
 			}
-			Terminal(
-				terminalEmulator = session.terminal,
-				modifier = Modifier.weight(1f).fillMaxWidth().testTag("terminal"),
-				onTerminalLongPress = { showMenu = true },
-				localHistory = localHistory,
-				onSelectionControllerAvailable = { selection = it },
-				onScrollControllerAvailable = { scroll = it },
-				onPasteRequest = ::pasteClipboard,
-				keyboardEnabled = true,
-				showSoftKeyboard = keyboard,
-				initialFontSize = settings.getDouble("font_size").toFloat().sp,
-				typeface = fontResult.getOrDefault(Typeface.MONOSPACE),
-				maxFontSize = 40.sp,
-				backgroundColor = Color(settings.getLong("background").toInt()),
-				foregroundColor = Color(settings.getLong("foreground").toInt()),
-				onInterceptKey = { event ->
-					val action = TerminalActions.matches(event.nativeKeyEvent, settings.getJSONArray("bindings"))
-					if (action != null && !showEditor && !showConnect && !showSettings && !showMenu) {
-						if (event.nativeKeyEvent.action ==
-							KeyEvent.ACTION_DOWN
-						) {
-							TerminalActions.perform(action, session.terminal) { showEditor = true }
-						}
+			val perform = {
+				TerminalActions.perform(action.getJSONObject("action"), session.terminal) {
+					showEditor =
 						true
-					} else {
-						false
-					}
 				}
-			)
-			if (localHistory) {
-				TextButton(onClick = {
-					localHistory = false
-					scroll?.scrollToBottom()
-					selection?.clearSelection()
-				}) { Text("Return to live terminal") }
+				showActions = false
 			}
-			if (fontResult.isFailure) {
-				Text(
-					"Cannot load imported font. Select another font in Settings.",
-					color = MaterialTheme.colorScheme.error
-				)
-			}
-			if (!hardwareKeyboard || keyboard) {
-				Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-					TextButton(onClick = {
-						session.terminal.dispatchKey(0, VTermKey.ESCAPE)
-					}) { Text("Esc") }
-					TextButton(onClick = {
-						session.terminal.dispatchKey(0, VTermKey.TAB)
-					}) { Text("Tab") }
-					TextButton(onClick = {
-						session.terminal.dispatchCharacter(4, 'c'.code)
-					}) { Text("Ctrl-C") }
-					val actions = settings.getJSONArray("quick_actions")
-					for (i in 0 until actions.length()) {
-						val action = actions.getJSONObject(i)
-						if (action.getString("name") == "Editor" &&
-							action.getJSONObject("action").getString("kind") == "editor"
-						) {
-							continue
-						}
-						TextButton(onClick = {
-							TerminalActions.perform(action.getJSONObject("action"), session.terminal) {
-								showEditor =
-									true
-							}
-						}) { Text(action.getString("name")) }
-					}
-				}
-			}
-			Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-				TextButton(onClick = { showSettings = true }) { Text("Settings") }
-				TextButton(onClick = { keyboard = !keyboard }) { Text("Keyboard") }
-				TextButton(onClick = {
-					stayAwake = !stayAwake
-				}) { Text(if (stayAwake) "Stay awake" else "Allow sleep") }
+			if (menu) {
+				DropdownMenuItem(text = { Text(action.getString("name")) }, onClick = perform)
+			} else {
+				TextButton(onClick = perform) { Text(action.getString("name")) }
 			}
 		}
 	}
+	Surface(Modifier.fillMaxSize()) {
+		Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+			if (landscape) {
+				Row(Modifier.fillMaxSize()) {
+					Column(
+						Modifier.width(52.dp).fillMaxHeight().background(MaterialTheme.colorScheme.surface)
+							.verticalScroll(rememberScrollState()).testTag("landscape-controls"),
+						horizontalAlignment = Alignment.CenterHorizontally
+					) {
+						ToolIcon(
+							TerminalIcons.Connect,
+							"Connect",
+							state.state == "connected",
+							Modifier.semantics {
+								stateDescription =
+									"${state.name}: ${state.detail}"
+							}
+						) { showConnect = true }
+						ToolIcon(TerminalIcons.Editor, "Editor") { showEditor = true }
+						ToolIcon(TerminalIcons.Keyboard, "Keyboard", keyboard) { keyboard = !keyboard }
+						Box {
+							ToolIcon(TerminalIcons.Actions, "Quick actions") { showActions = true }
+							DropdownMenu(expanded = showActions, onDismissRequest = {
+								showActions = false
+							}) { auxiliary(true) }
+						}
+						ToolIcon(TerminalIcons.Settings, "Settings") { showSettings = true }
+						Box {
+							ToolIcon(TerminalIcons.More, "Session options") { showOptions = true }
+							DropdownMenu(expanded = showOptions, onDismissRequest = { showOptions = false }) {
+								Text(
+									state.name,
+									Modifier.padding(horizontal = 16.dp),
+									style = MaterialTheme.typography.titleSmall
+								)
+								Text(state.detail, Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall)
+								if (fontResult.isFailure) {
+									Text(
+										"Cannot load imported font. Select another font in Settings.",
+										Modifier.padding(16.dp),
+										color = MaterialTheme.colorScheme.error
+									)
+								}
+								DropdownMenuItem(text = {
+									Text(if (stayAwake) "Allow sleep" else "Stay awake")
+								}, leadingIcon = { Icon(TerminalIcons.Awake, null) }, onClick = {
+									stayAwake =
+										!stayAwake
+									showOptions = false
+								})
+								DropdownMenuItem(text = { Text("Terminal menu") }, onClick = {
+									showMenu = true
+									showOptions =
+										false
+								})
+								if (state.state !=
+									"idle"
+								) {
+									DropdownMenuItem(text = {
+										Text("Disconnect")
+									}, leadingIcon = { Icon(TerminalIcons.Disconnect, null) }, onClick = {
+										session.disconnect()
+										showOptions =
+											false
+									})
+								}
+							}
+						}
+						if (localHistory) ToolIcon(TerminalIcons.Live, "Return to live terminal") { returnToLive() }
+					}
+					viewport(Modifier.weight(1f).fillMaxHeight())
+				}
+			} else {
+				Column(Modifier.fillMaxSize()) {
+					Row(
+						Modifier.fillMaxWidth().padding(start = 12.dp),
+						verticalAlignment = Alignment.CenterVertically
+					) {
+						Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+							Text(
+								state.name,
+								style = MaterialTheme.typography.titleSmall,
+								maxLines = 1,
+								overflow = TextOverflow.Ellipsis
+							)
+							Text(
+								state.detail,
+								style = MaterialTheme.typography.labelSmall,
+								maxLines = 1,
+								overflow = TextOverflow.Ellipsis
+							)
+						}
+						ToolIcon(TerminalIcons.Connect, "Connect", state.state == "connected") { showConnect = true }
+						ToolIcon(TerminalIcons.Editor, "Editor") { showEditor = true }
+						if (state.state !=
+							"idle"
+						) {
+							ToolIcon(TerminalIcons.Disconnect, "Disconnect") { session.disconnect() }
+						}
+					}
+					viewport(Modifier.weight(1f).fillMaxWidth())
+					if (localHistory) TextButton(onClick = ::returnToLive) { Text("Return to live terminal") }
+					if (fontResult.isFailure) {
+						Text(
+							"Cannot load imported font. Select another font in Settings.",
+							color = MaterialTheme.colorScheme.error
+						)
+					}
+					if (!hardwareKeyboard ||
+						keyboard
+					) {
+						Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) { auxiliary(false) }
+					}
+					Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+						ToolIcon(TerminalIcons.Settings, "Settings") { showSettings = true }
+						ToolIcon(TerminalIcons.Keyboard, "Keyboard", keyboard) { keyboard = !keyboard }
+						ToolIcon(TerminalIcons.Awake, if (stayAwake) "Allow sleep" else "Stay awake", stayAwake) {
+							stayAwake =
+								!stayAwake
+						}
+					}
+				}
+			}
+			SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+		}
+	}
+
 	if (showMenu) {
 		AlertDialog(onDismissRequest = { showMenu = false }, title = { Text("Terminal menu") }, text = {
 			Column {
@@ -339,5 +485,32 @@ private fun SessionScreen(
 			},
 			dismissButton = { TextButton(onClick = { session.trust(false) }) { Text("Cancel") } }
 		)
+	}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ToolIcon(
+	icon: ImageVector,
+	label: String,
+	active: Boolean = false,
+	modifier: Modifier = Modifier,
+	click: () -> Unit
+) {
+	TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(), tooltip = {
+		PlainTooltip { Text(label) }
+	}, state = rememberTooltipState()) {
+		IconButton(onClick = click, modifier = modifier.size(48.dp)) {
+			Icon(
+				icon,
+				contentDescription = label,
+				modifier = Modifier.size(22.dp),
+				tint = if (active) {
+					MaterialTheme.colorScheme.primary
+				} else {
+					MaterialTheme.colorScheme.onSurfaceVariant
+				}
+			)
+		}
 	}
 }

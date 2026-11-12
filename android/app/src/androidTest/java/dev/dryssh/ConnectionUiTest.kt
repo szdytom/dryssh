@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -27,7 +28,7 @@ class ConnectionUiTest {
 		val context = InstrumentationRegistry.getInstrumentation().targetContext
 		context.getSharedPreferences("host-keys", 0).edit().remove("$host:$port").commit()
 		try {
-			compose.onNodeWithText("Connect").performClick()
+			compose.onNodeWithContentDescription("Connect").performClick()
 			compose.onNode(hasText("Host") and hasSetTextAction()).performTextInput(host!!)
 			compose.onNode(hasText("Port") and hasSetTextAction()).performTextClearance()
 			compose.onNode(hasText("Port") and hasSetTextAction()).performTextInput(port)
@@ -44,7 +45,7 @@ class ConnectionUiTest {
 				compose.onAllNodesWithText("Connected").fetchSemanticsNodes().isNotEmpty()
 			}
 			compose.onNodeWithText("dryssh@$host").assertIsDisplayed()
-			compose.onNodeWithText("Disconnect").performClick()
+			compose.onNodeWithContentDescription("Disconnect").performClick()
 			compose.onNodeWithText("Disconnected").assertIsDisplayed()
 		} finally {
 			context.startService(Intent(context, SshService::class.java).setAction("disconnect"))

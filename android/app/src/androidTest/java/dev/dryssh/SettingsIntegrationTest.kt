@@ -17,6 +17,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -42,7 +43,7 @@ class SettingsIntegrationTest {
 			var font: File? = null
 			try {
 				fixture.connect()
-				compose.onNodeWithText("Settings").performClick()
+				compose.onNodeWithContentDescription("Settings").performClick()
 				fun fill(label: String, value: String) {
 					val field = compose.onNode(hasText(label) and hasSetTextAction())
 					field.performScrollTo().performTextClearance()
