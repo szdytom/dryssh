@@ -15,7 +15,8 @@ android {
 			abiFilters +=
 				providers.gradleProperty("dryssh.abis").orElse("arm64-v8a,x86_64").get().split(",")
 		}
-		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+		testInstrumentationRunner =
+			providers.gradleProperty("dryssh.runner").orElse("androidx.test.runner.AndroidJUnitRunner").get()
 	}
 	buildTypes {
 		release { signingConfig = signingConfigs.getByName("debug") }
