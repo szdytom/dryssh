@@ -58,7 +58,7 @@ reattachment for keeping the original SSH session.
 
 - With the test process default forced to cellular, an ordinary socket uses
   `10.0.2.15`; the strict WLAN socket uses `10.0.2.16`, and both read real SSH
-  banners before isolation.
+  banners.
 - The additional AOSP-root fixture blocks cellular UDP/TCP DNS. A fresh wildcard
   hostname fails on the cellular resolver. It then blocks cellular TCP to the SSH
   fixture and verifies a new cellular connection fails. The WLAN-specific DNS
@@ -113,7 +113,7 @@ keys before authentication, unencrypted keys and transport cancellation.
   those platform capabilities.
 - OS process termination closes its TCP session. Profiles/credentials persist;
   active sessions and local editor drafts are not restored after process death.
-- Input waiting for the transport is bounded to 4 MiB. Font imports are bounded
+- The platform input queue has a 4 MiB limit. Font imports are bounded
   to 32 MiB and private-key imports to 1 MiB.
 - System/IME-reserved key combinations depend on the device; configurable
   mappings provide alternatives for events the application can receive.
