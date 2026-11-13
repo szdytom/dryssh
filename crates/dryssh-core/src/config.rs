@@ -150,22 +150,14 @@ fn valid_key(key: &str) -> bool {
 		|| matches!(
 			key,
 			"space"
-				| "escape"
-				| "tab"
-				| "enter"
-				| "backspace"
-				| "delete"
-				| "insert"
-				| "home"
-				| "end"
-				| "up"
-				| "down"
-				| "left"
-				| "right"
-				| "page_up"
-				| "page_down"
-		)
-		|| (1..=12).any(|number| key == format!("f{number}"))
+				| "escape" | "tab"
+				| "enter" | "backspace"
+				| "delete" | "insert"
+				| "home" | "end"
+				| "up" | "down"
+				| "left" | "right"
+				| "page_up" | "page_down"
+		) || (1..=12).any(|number| key == format!("f{number}"))
 }
 
 impl Action {

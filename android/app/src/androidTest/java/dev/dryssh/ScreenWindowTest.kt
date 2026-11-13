@@ -105,7 +105,15 @@ class ScreenWindowTest {
 			)) {
 				compose.onNodeWithContentDescription(open).performClick()
 				compose.onNodeWithTag("dialog-content").assertIsDisplayed()
-				compose.waitForIdle()
+				compose.waitUntil(5_000) {
+					var focused = false
+					activity.onActivity { activity ->
+						focused = WindowInspector.getGlobalWindowViews().any {
+							it !== activity.window.decorView && it.hasWindowFocus()
+						}
+					}
+					focused
+				}
 				val content = compose.onNodeWithTag("dialog-content").fetchSemanticsNode().boundsInRoot
 				activity.onActivity {
 					val view = WindowInspector.getGlobalWindowViews().single { it.hasWindowFocus() }

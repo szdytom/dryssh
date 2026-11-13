@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from acceptance import immersive_mode_confirmed
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -18,6 +20,11 @@ def main():
         "--apk",
         default="android/app/build/outputs/apk/debug/app-debug.apk",
         help="App APK to accept, including a release APK",
+    )
+    parser.add_argument(
+        "--test-apk",
+        default="android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+        help="Instrumentation APK signed with the same key as the app",
     )
     parser.add_argument(
         "--ssh-host", help="OpenSSH fixture host reachable from Android"
@@ -45,10 +52,12 @@ def main():
     adb = ["adb", "-s", args.serial]
     apks = [
         args.apk,
-        "android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+        args.test_apk,
     ]
     for apk in apks:
-        subprocess.run([*adb, "install", "-r", str(ROOT / apk)], check=True)
+        subprocess.run(
+            [*adb, "install", "--no-incremental", "-r", str(ROOT / apk)], check=True
+        )
     subprocess.run(
         [
             *adb,
@@ -73,9 +82,10 @@ def main():
     artifact = ROOT / "artifacts/android" / args.serial
     artifact.mkdir(parents=True, exist_ok=True)
     try:
-        result = subprocess.run(
-            command, capture_output=True, text=True, timeout=240, check=False
-        )
+        with immersive_mode_confirmed(adb):
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=240, check=False
+            )
         report = result.stdout + result.stderr
     except subprocess.TimeoutExpired as error:
         output = error.stdout or b""

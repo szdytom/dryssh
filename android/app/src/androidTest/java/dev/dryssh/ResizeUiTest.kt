@@ -18,6 +18,11 @@ class ResizeUiTest {
 			fixture.connect()
 			val pid = fixture.shellPid("resize-before")
 			fun ime(visible: Boolean) {
+				compose.waitUntil(5_000) {
+					var focused = false
+					fixture.activity.onActivity { focused = it.window.decorView.hasWindowFocus() }
+					focused
+				}
 				fixture.activity.onActivity { activity ->
 					if (visible) {
 						activity.window.insetsController!!.show(WindowInsets.Type.ime())

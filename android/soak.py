@@ -8,6 +8,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from acceptance import immersive_mode_confirmed
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -123,7 +125,10 @@ def main():
         str(args.minutes),
         "dev.dryssh.test/dev.dryssh.SoakAcceptanceRunner",
     ]
-    with (artifact / "integration.txt").open("w") as output:
+    with (
+        immersive_mode_confirmed(adb),
+        (artifact / "integration.txt").open("w") as output,
+    ):
         process = subprocess.Popen(command, stdout=output, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + args.minutes * 60 + 180
         snapshot = False

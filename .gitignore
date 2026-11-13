@@ -32,3 +32,11 @@ AGENTS.override.md
 /android/**/build/
 /android/local.properties
 /android/**/.cxx/
+
+# Release signing material
+*.jks
+*.keystore
+*.p12
+*.pfx
+signing.json
+.ruff_cache/

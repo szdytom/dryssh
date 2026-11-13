@@ -1,140 +1,88 @@
 # DrySSH
 
-A terminal-first Android SSH client for an external keyboard, with a single active
-session and multiple saved connection profiles. The first daily-use feature set
-from `plan.md` is implemented; acceptance uses Android emulators as agreed with
-the user. See [verification and limits](docs/progress.md).
+A terminal-first Android SSH client for phones and external keyboards.
+Connect to a server, keep a shell open, and work with tools such as tmux and nvim.
+No server-side helper is required.
 
-The app uses immersive edge-to-edge windows; swipe from an edge to temporarily
-reveal the system bars. Controls avoid the actual camera cutout, display corners
-(Android 12+) and keyboard instead of reserving a uniform border. Portrait controls
-use the space beside the camera, with overflow actions on narrow screens.
-Landscape controls use a **52 dp icon rail**, choosing the side that gives the
-terminal more usable area and expanding only when a cutout requires it. The
-terminal keeps a complete rectangular grid. Icons have accessible names and long-press
-tooltips. The plug opens connections, the pencil opens the local editor, the
-keyboard toggles the IME, and the lightning icon opens auxiliary keys/actions.
-The session menu contains status, screen-awake and disconnect controls.
+![DrySSH landscape terminal and controls](docs/images/landscape.png)
 
-Saved profiles support passwords and imported private keys, including encrypted
-keys. Auto-reconnect defaults on; WLAN-only defaults off. Switching targets closes
-the previous session. Reconnection starts a fresh shell and never replays input.
-The default editor shortcut is Ctrl+Shift+E; mappings and quick actions are editable
-in Settings, along with terminal themes, font import and size.
+## Features
 
-Settings → Appearance → Theme offers searchable previews of all **179 bundled
-[Alacritty themes](https://github.com/alacritty/alacritty-theme)**, including
-Everforest Dark Medium, plus the original DrySSH palette. Themes work offline and
-apply foreground, background and all 16 ANSI colors together after saving.
-Existing custom colors are retained as “Saved colors” until replaced by a theme.
-The selected theme survives app restarts, including themes with identical palettes.
+- Saved connection profiles with password or private-key authentication, including
+  encrypted keys, and host-key verification before authentication.
+- One active session, configurable reconnect and strict WLAN-only networking.
+- Local IME composition and a multiline editor with negotiated bracketed paste.
+- Configurable keyboard shortcuts, font import and 179 offline Alacritty themes.
+- Adaptive portrait/landscape controls, touch selection, history and clipboard.
+- Android Keystore encrypted credentials and foreground-session controls.
 
-Direct Android IME composition stays local until commit. The native multiline
-editor keeps a local draft and uses negotiated bracketed paste without adding
-Enter. Esc closes the editor and keeps the draft; Shift+Enter pastes, while Enter
-inserts a newline. The editor also uses the configured terminal font. When
-bracketed paste is off, multiline paste stays blocked until the user chooses
-an explicit plain-paste fallback. Long press opens local selection, clipboard and
-history actions; ordinary taps/scrolling follow remote mouse and screen modes.
+## Install
 
-## Build and install
+Requires **Android 11 (API 30) or later**, on ARM64 or x86_64.
+Download the signed APK from this repository's **Releases** page when available,
+verify it against `SHA256SUMS`, and open it with Android's package installer.
+The first public version is a preview; see [release notes](docs/releases/0.1.0.md).
 
-Use JDK 21, Rust 1.99.1, Android SDK Platform 37.0, Build Tools 36.0.0, CMake
-3.22.1 and NDK 29.0.14206865. The checksum-pinned Gradle wrapper downloads Gradle.
-Minimum Android version: **11 (API 30)**.
+The maintainer has tested basic functionality on an ARM64 physical device.
+Automated emulator acceptance covers SSH, input, terminal workflows and network
+policy; [verification details and limits](docs/progress.md) record the scope.
+
+Reconnection starts a fresh shell. Process termination loses the active session
+and editor draft. Jump hosts, Mosh, multiple active sessions and configuration
+backup/export are outside this release. Uninstalling removes profiles and
+credentials; retain your original private keys.
+
+## Quick start
+
+Open the plug icon to save a connection and connect. Verify a new server's
+fingerprint through a trusted channel before accepting it. The pencil opens the
+local editor; Ctrl+Shift+E is its default shortcut. Enter inserts a newline and
+Shift+Enter pastes without sending a trailing Enter. Esc keeps the draft.
+
+The keyboard icon toggles the IME; the lightning icon opens auxiliary keys/actions.
+Settings contains themes, fonts, shortcuts and quick actions. The session menu
+contains screen-awake and disconnect controls. Swipe from a screen edge to reveal
+Android's system bars temporarily.
+
+## Build from source
+
+Use JDK 21, the Rust toolchain pinned in `rust-toolchain.toml`, Android SDK Platform
+37.0, Build Tools 36.0.0, CMake 3.22.1 and NDK 29.0.14206865. Python 3.11+ is required.
+The checksum-pinned Gradle wrapper downloads Gradle.
 
 ```sh
 sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'cmake;3.22.1' 'ndk;29.0.14206865'
-rustup target add aarch64-linux-android x86_64-linux-android
 export ANDROID_HOME=/path/to/android-sdk
 export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/29.0.14206865"
-python3 android/build.py --release --test
-adb install -r target/android/dryssh-release.apk
+python3 android/build.py
+adb install -r target/android/dryssh-debug.apk
 ```
 
-The default APK contains ARM64 and x86_64. `--abi arm64-v8a` builds only for a phone;
-`--abi x86_64` builds only for an emulator. `--release` optimizes the Rust core.
-Both build types currently use the local Android debug signing key: preserve it
-for compatible updates. These are personal development builds.
+The default build contains ARM64 and x86_64. `--abi arm64-v8a` or `--abi x86_64`
+builds one architecture. `--release` optimizes Rust and produces one **unsigned**
+APK per ABI, each carrying only that ABI's `libdryssh.so`; debug builds keep a
+single APK containing both architectures. [Release instructions](docs/releasing.md)
+cover dedicated signing and archives.
+Debug certificates are for local development only.
 
 Use `--gradle-arg=OPTION` for local proxy/AAPT2 overrides. On NixOS, the NDK, CMake,
 AAPT2 and emulator need an FHS environment or patched native executables.
 
-## Architecture and storage
+## Development
 
-- The platform-independent Rust core owns SSH, profiles/settings and the connection
-  policy. It receives an already-connected transport and cannot bypass platform
-  network selection with its own default socket.
-- The foreground service owns the SSH session, terminal, notification and partial
-  wake lock. Activity recreation replaces the view; it does not reconnect SSH.
-- WLAN-only reserves a Wi-Fi network, resolves DNS on that network and binds each
-  socket to it. Loss closes the transport and waits rather than falling back.
-- The independent `CredentialStore` interface uses Android Keystore AES-256-GCM.
-  Configuration holds references; password/private-key/passphrase blobs are
-  encrypted in `noBackupFilesDir`. There is no plaintext fallback. Clearing app
-  data/uninstalling removes them; backup/export is outside this release.
+[Build checks and device acceptance](docs/development.md) describe how to run the
+Rust, Android and OpenSSH fixture suites. GitHub CI checks formatting, lint and
+unit/integration tests, scans Git history, and builds both native architectures.
+Its unsigned per-ABI APK artifacts are intended for build verification.
 
-The terminal snapshot and local patches are documented in
-[UPSTREAM.md](android/terminal/UPSTREAM.md). Its Apache-2.0 and libvterm MIT licenses
-are retained. The app does not require server-side helper software.
+The Rust core owns SSH, profiles/settings and connection policy. Android owns
+network selection, the foreground service and Keystore-backed credentials.
+Credentials are encrypted in `noBackupFilesDir`; there is no plaintext fallback.
+Application logs contain state transitions and route information, excluding
+credentials and terminal transcripts.
 
-## Checks
+## License
 
-```sh
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo test --workspace --locked
-cd android
-./gradlew spotlessCheck :app:testDebugUnitTest :app:lintRelease
-```
-
-For device acceptance, build both app/test APKs first and start the fixture:
-
-```sh
-podman build --network host -t localhost/dryssh-fixture android/fixture
-podman run -d --name dryssh-fixture -p 127.0.0.1:22222:22 localhost/dryssh-fixture
-./android/fixture/install-codex.sh
-adb -s emulator-5554 shell svc wifi enable
-adb -s emulator-5554 shell cmd wifi connect-network AndroidWifi open
-python3 android/test.py --skip-build --apk target/android/dryssh-release.apk \
-  --ssh-host 10.0.2.2 --ssh-dns-host 10.0.2.2.nip.io --isolate-dns
-```
-
-The isolated fixture uses `dryssh` / `dryssh-test`; its published encrypted key and
-passphrase (`dryssh-key-test`) are public test credentials. The pinned real Codex
-CLI talks to a local fixed Responses service, which hashes the submitted text.
-This tests its actual terminal UI without an account or model-inference charges.
-The fixture provider follows the
-[official provider configuration](https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server).
-
-`--isolate-dns` is an additional **AOSP emulator root test**: it blocks cellular DNS
-and then cellular access to the fixture port while verifying WLAN DNS/SSH still
-work. Rules and resolver settings are restored. The ordinary route test also
-compares actual socket addresses with the process default forced to cellular.
-Production app code never binds the whole process and does not require root.
-
-`--class dev.dryssh.NetworkAccessTest` selects a case. Without SSH arguments,
-fixture cases skip; the harness rejects skips when `--ssh-host` is supplied.
-Reports/logcat/screenshots go to `artifacts/android/<serial>/`.
-
-Long and restart acceptance use explicit runners, outside the ordinary suite:
-
-```sh
-python3 android/build.py --abi x86_64 --test \
-  --gradle-arg=-Pdryssh.runner=dev.dryssh.CredentialRestartRunner
-python3 android/restart.py --serial emulator-5554
-
-python3 android/build.py --abi x86_64 --test \
-  --gradle-arg=-Pdryssh.runner=dev.dryssh.SoakAcceptanceRunner
-python3 android/soak.py --serial emulator-5556 --mode background
-python3 android/soak.py --serial emulator-5558 --mode lock
-```
-
-Use separate emulators for parallel long tests. Each disables reconnect, unplugs
-the simulated battery and holds the original connection for at least 30 minutes.
-It verifies remote shell/sshd PIDs and one authentication for the recorded TCP
-connection. Restore the ordinary test runner by building without `dryssh.runner`.
-
-App logs/crashes: `adb logcat -s AndroidRuntime DrySSH`. Application logs contain
-state transitions and route information, not credentials or terminal transcripts.
-HarmonyOS/卓易通, actual Bluetooth keyboards and Doubao IME are verified by the user.
+DrySSH's own code is [MIT licensed](LICENSE). Third-party components retain their
+licenses; see [third-party notices](NOTICE.md), [terminal source and local
+patches](android/terminal/UPSTREAM.md), and [bundled themes](android/THEMES.md).

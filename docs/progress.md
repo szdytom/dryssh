@@ -1,8 +1,18 @@
 # Delivery status
 
-The daily-use feature set in `plan.md` sections 2–6 is implemented and accepted in
-Android emulators, as authorized by the user. Physical HarmonyOS/卓易通, Bluetooth
-hardware and Doubao verification remain with the user.
+The first daily-use feature set is implemented and accepted in Android emulators.
+On 2026-11-13, the maintainer also reported that basic functionality passed on an
+ARM64 physical device. This report does not claim exhaustive device-specific
+background, network, Bluetooth keyboard or IME acceptance.
+
+## Current publication regression
+
+After fixing system-tutorial focus interference and notification accessibility
+synchronization, the dedicated release APK passed all 41 instrumented tests twice
+consecutively on the API 35 emulator, with no skips and no application-data reset
+between runs. The suite includes WLAN DNS/TCP isolation and the original-shell
+notification return check. Seven Python tests, six JVM tests, formatting and
+Android release lint also pass. See [publication checks](publication-checks.md).
 
 ## Milestones
 
@@ -28,7 +38,7 @@ Existing custom palettes remain available as “Saved colors”. Theme IDs disti
 upstream names with identical colors. Source pins, attribution and regeneration
 instructions are recorded in [android/THEMES.md](../android/THEMES.md).
 
-## Release acceptance — 2026-11-13
+## Initial release acceptance — 2026-11-13
 
 - **32 instrumented tests passed, zero skipped**, against the actual release APK
   on the API 35 AOSP x86_64 phone emulator. The suite includes the stronger
@@ -47,7 +57,8 @@ instructions are recorded in [android/THEMES.md](../android/THEMES.md).
   `themes-clippy.log` and `themes-build-final.log` in the same directory.
 - The APK contains `arm64-v8a` and `x86_64`, requires API 30+, targets API 37,
   and passes APK signature verification. ARM64 is cross-compiled; emulator
-  execution uses x86_64. The APK uses the local debug signing key for updates.
+  execution uses x86_64. These initial APKs used the local debug signing key;
+  current public artifacts use the dedicated identity in [releasing.md](releasing.md).
 
 ### Original connection survival
 
@@ -133,14 +144,15 @@ keys before authentication, unencrypted keys and transport cancellation.
   landscape rotations. Swiping to reveal transient system bars preserves terminal
   bounds; IME/rotation resize the existing remote PTY without replacing its shell.
 - Reports, display geometry and screenshots are in
-  `artifacts/android/emulator-5554/edges/`. The universal ARM64/x86_64 release APK
-  builds and passes signature verification. Physical devices remain unverified.
+  `artifacts/android/emulator-5554/edges/`. The ARM64 and x86_64 release APKs build
+  and pass signature verification. ARM64 physical-device basic
+  functionality was subsequently confirmed by the maintainer.
 
 ## Practical limits
 
 - Phone/container-specific network enforcement, background survival, Android
-  Keystore behavior, actual Bluetooth events and Doubao speech must be checked
-  on the user's HarmonyOS/卓易通 environment. Emulator success does not assert
+  Keystore behavior, actual Bluetooth events and Doubao speech need dedicated
+  checks beyond the reported basic ARM64 testing. Emulator success does not assert
   those platform capabilities.
 - OS process termination closes its TCP session. Profiles/credentials persist;
   active sessions and local editor drafts are not restored after process death.
@@ -152,6 +164,6 @@ keys before authentication, unencrypted keys and transport cancellation.
   adaptation, automatic tmux restoration, clipboard reads over OSC 52 and
   configuration backup/export remain outside the agreed first-release scope.
 
-Build, fixture and rerun commands are in [README.md](../README.md). Terminal source
-pins, licenses and behavior changes are in
+Build, fixture and rerun commands are in [development.md](development.md).
+Terminal source pins, licenses and behavior changes are in
 [UPSTREAM.md](../android/terminal/UPSTREAM.md).

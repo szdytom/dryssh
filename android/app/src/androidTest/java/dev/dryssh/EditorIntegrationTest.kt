@@ -48,6 +48,11 @@ class EditorIntegrationTest {
 
 	private fun shiftEnter() {
 		val instrumentation = InstrumentationRegistry.getInstrumentation()
+		compose.waitUntil(5_000) {
+			var focused = false
+			instrumentation.runOnMainSync { focused = editor().hasFocus() && editor().hasWindowFocus() }
+			focused
+		}
 		instrumentation.runOnMainSync {
 			assertTrue("The editor must retain keyboard focus", editor().hasFocus())
 		}

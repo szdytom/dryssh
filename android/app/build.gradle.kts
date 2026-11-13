@@ -2,6 +2,13 @@ plugins {
 	id("com.android.application")
 	id("org.jetbrains.kotlin.plugin.compose")
 }
+val licenseAssets = tasks.register<Sync>("licenseAssets") {
+	into(layout.buildDirectory.dir("generated/licenseAssets/licenses"))
+	from(rootProject.file("../LICENSE"))
+	from(rootProject.file("../NOTICE.md"))
+	from(rootProject.file("terminal/LICENSE")) { rename { "termlib-LICENSE" } }
+	from(rootProject.file("terminal/src/main/cpp/libvterm/LICENSE")) { rename { "libvterm-LICENSE" } }
+}
 android {
 	namespace = "dev.dryssh"
 	compileSdk = 37
@@ -18,16 +25,17 @@ android {
 		testInstrumentationRunner =
 			providers.gradleProperty("dryssh.runner").orElse("androidx.test.runner.AndroidJUnitRunner").get()
 	}
-	buildTypes {
-		release { signingConfig = signingConfigs.getByName("debug") }
-	}
 	sourceSets["main"].jniLibs.directories.add("../../target/android/jniLibs")
+	sourceSets["main"].assets.directories.add(
+		layout.buildDirectory.dir("generated/licenseAssets").get().asFile.absolutePath
+	)
 	compileOptions {
 		sourceCompatibility = JavaVersion.VERSION_17
 		targetCompatibility = JavaVersion.VERSION_17
 	}
 	buildFeatures { compose = true }
 }
+tasks.named("preBuild") { dependsOn(licenseAssets) }
 dependencies {
 	implementation(project(":terminal"))
 	implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")

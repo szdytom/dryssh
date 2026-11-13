@@ -35,6 +35,7 @@ class ServiceNotificationTest {
 			fixture.connect()
 			val before = fixture.shellPid("return-before")
 			val automation = fixture.instrumentation.uiAutomation
+			val originalFlags = automation.serviceInfo.flags
 			fun shell(command: String) {
 				ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {
 					it.readBytes()
@@ -48,25 +49,30 @@ class ServiceNotificationTest {
 						flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
 						AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
 				}
-				fun find(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+				fun find(
+					node: AccessibilityNodeInfo?,
+					clickable: AccessibilityNodeInfo? = null
+				): AccessibilityNodeInfo? {
 					if (node == null) return null
+					val target = if (node.isClickable) node else clickable
 					if (node.text?.contains("Integration server") == true ||
 						node.contentDescription?.contains("Integration server") == true
 					) {
-						return node
+						return target
 					}
-					for (i in 0 until node.childCount) find(node.getChild(i))?.let { return it }
+					for (i in 0 until node.childCount) find(node.getChild(i), target)?.let { return it }
 					return null
 				}
 				fun notification() = automation.windows.firstNotNullOfOrNull { find(it.root) }
-				fixture.awaitCondition { notification() != null }
-				var node = notification()!!
-				while (!node.isClickable) node = node.parent
-				assertTrue(node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+				fixture.awaitCondition {
+					notification()?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ==
+						true
+				}
 				fixture.awaitCondition { fixture.activity.state == Lifecycle.State.RESUMED }
 				assertEquals(before, fixture.shellPid("return-after"))
 			} finally {
 				shell("cmd statusbar collapse")
+				automation.serviceInfo = automation.serviceInfo.apply { flags = originalFlags }
 			}
 		}
 	}

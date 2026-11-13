@@ -1,0 +1,3 @@
+# Public fixture only; its bytes are checked in CI before scanning.
+8a5ad56545e46546ff1706f6a6cc7eed33d1f3e2:android/app/src/androidTest/assets/encrypted-fixture-key:private-key:1
+android/app/src/androidTest/assets/encrypted-fixture-key:private-key:1
