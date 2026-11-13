@@ -48,6 +48,9 @@ class EditorIntegrationTest {
 
 	private fun shiftEnter() {
 		val instrumentation = InstrumentationRegistry.getInstrumentation()
+		instrumentation.runOnMainSync {
+			assertTrue("The editor must retain keyboard focus", editor().hasFocus())
+		}
 		val time = SystemClock.uptimeMillis()
 		for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
 			instrumentation.sendKeySync(

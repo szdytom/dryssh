@@ -16,23 +16,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -94,6 +89,7 @@ class MainActivity : ComponentActivity() {
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
+		window.useImmersiveScreen()
 		bindService(Intent(this, SshService::class.java), binding, Context.BIND_AUTO_CREATE)
 		setContent {
 			MaterialTheme(
@@ -116,6 +112,11 @@ class MainActivity : ComponentActivity() {
 			}
 		}
 	}
+	override fun onWindowFocusChanged(hasFocus: Boolean) {
+		super.onWindowFocusChanged(hasFocus)
+		if (hasFocus) window.hideSystemBars()
+	}
+
 	override fun onDestroy() {
 		unbindService(binding)
 		service = null
@@ -293,14 +294,11 @@ private fun SessionScreen(
 		}
 	}
 	Surface(Modifier.fillMaxSize()) {
-		Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-			if (landscape) {
-				Row(Modifier.fillMaxSize()) {
-					Column(
-						Modifier.width(52.dp).fillMaxHeight().background(MaterialTheme.colorScheme.surface)
-							.verticalScroll(rememberScrollState()).testTag("landscape-controls"),
-						horizontalAlignment = Alignment.CenterHorizontally
-					) {
+		Box(Modifier.fillMaxSize()) {
+			SessionLayout(
+				landscape = landscape,
+				controls = { bounds, geometry ->
+					SafeRail(bounds, geometry) {
 						ToolIcon(
 							TerminalIcons.Connect,
 							"Connect",
@@ -362,15 +360,27 @@ private fun SessionScreen(
 						}
 						if (localHistory) ToolIcon(TerminalIcons.Live, "Return to live terminal") { returnToLive() }
 					}
-					viewport(Modifier.weight(1f).fillMaxHeight())
-				}
-			} else {
-				Column(Modifier.fillMaxSize()) {
-					Row(
-						Modifier.fillMaxWidth().padding(start = 12.dp),
-						verticalAlignment = Alignment.CenterVertically
+				},
+				header = { bounds, geometry ->
+					SafeHeader(
+						bounds,
+						geometry,
+						buildList {
+							add(
+								EdgeAction(TerminalIcons.Connect, "Connect", state.state == "connected") {
+									showConnect =
+										true
+								}
+							)
+							add(EdgeAction(TerminalIcons.Editor, "Editor") { showEditor = true })
+							if (state.state !=
+								"idle"
+							) {
+								add(EdgeAction(TerminalIcons.Disconnect, "Disconnect") { session.disconnect() })
+							}
+						}
 					) {
-						Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+						Column(Modifier.padding(horizontal = 12.dp)) {
 							Text(
 								state.name,
 								style = MaterialTheme.typography.titleSmall,
@@ -384,44 +394,59 @@ private fun SessionScreen(
 								overflow = TextOverflow.Ellipsis
 							)
 						}
-						ToolIcon(TerminalIcons.Connect, "Connect", state.state == "connected") { showConnect = true }
-						ToolIcon(TerminalIcons.Editor, "Editor") { showEditor = true }
-						if (state.state !=
-							"idle"
-						) {
-							ToolIcon(TerminalIcons.Disconnect, "Disconnect") { session.disconnect() }
+					}
+				},
+				footer = { bounds, geometry ->
+					SafeFooter(
+						bounds,
+						geometry,
+						buildList {
+							if (localHistory) {
+								add {
+									TextButton(onClick = ::returnToLive) { Text("Return to live terminal") }
+								}
+							}
+							if (fontResult.isFailure) {
+								add {
+									Text(
+										"Cannot load imported font. Select another font in Settings.",
+										color = MaterialTheme.colorScheme.error,
+										maxLines = 2,
+										overflow = TextOverflow.Ellipsis
+									)
+								}
+							}
+							if (!hardwareKeyboard || keyboard) {
+								add {
+									Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) { auxiliary(false) }
+								}
+							}
+							add {
+								Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+									ToolIcon(TerminalIcons.Settings, "Settings") { showSettings = true }
+									ToolIcon(TerminalIcons.Keyboard, "Keyboard", keyboard) { keyboard = !keyboard }
+									ToolIcon(TerminalIcons.Awake, if (stayAwake) "Allow sleep" else "Stay awake", stayAwake) {
+										stayAwake =
+											!stayAwake
+									}
+								}
+							}
 						}
-					}
-					viewport(Modifier.weight(1f).fillMaxWidth())
-					if (localHistory) TextButton(onClick = ::returnToLive) { Text("Return to live terminal") }
-					if (fontResult.isFailure) {
-						Text(
-							"Cannot load imported font. Select another font in Settings.",
-							color = MaterialTheme.colorScheme.error
-						)
-					}
-					if (!hardwareKeyboard ||
-						keyboard
-					) {
-						Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) { auxiliary(false) }
-					}
-					Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-						ToolIcon(TerminalIcons.Settings, "Settings") { showSettings = true }
-						ToolIcon(TerminalIcons.Keyboard, "Keyboard", keyboard) { keyboard = !keyboard }
-						ToolIcon(TerminalIcons.Awake, if (stayAwake) "Allow sleep" else "Stay awake", stayAwake) {
-							stayAwake =
-								!stayAwake
-						}
-					}
-				}
+					)
+				},
+				terminal = viewport
+			)
+			SafeWindowRegion {
+				Box(Modifier.fillMaxSize()) { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter)) }
 			}
-			SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
 		}
 	}
 
 	if (showMenu) {
-		AlertDialog(onDismissRequest = { showMenu = false }, title = { Text("Terminal menu") }, text = {
-			Column {
+		ScreenAlertDialog(onDismissRequest = {
+			showMenu = false
+		}, title = { Text("Terminal menu") }, text = {
+			Column(Modifier.verticalScroll(rememberScrollState())) {
 				TextButton(
 					onClick = {
 						selection?.copySelection()
@@ -472,7 +497,7 @@ private fun SessionScreen(
 		)
 	}
 	state.hostKey?.let { key ->
-		AlertDialog(
+		ScreenAlertDialog(
 			onDismissRequest = { session.trust(false) },
 			title = { Text("Trust this host?") },
 			text = {
@@ -495,7 +520,7 @@ private fun SessionScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ToolIcon(
+internal fun ToolIcon(
 	icon: ImageVector,
 	label: String,
 	active: Boolean = false,

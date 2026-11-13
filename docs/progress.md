@@ -120,6 +120,22 @@ keys before authentication, unencrypted keys and transport cancellation.
   edits/reload and the editor shortcut pass. Notification taps return to the
   original shell, and the notification disconnect action cancels recovery.
 
+### Adaptive screen edges
+
+- Immersive Activity and dialog windows share cutout, waterfall, rounded-corner
+  (API 31+) and IME handling. Portrait controls use the camera's surrounding
+  space; landscape chooses the rail side that leaves the largest safe terminal.
+- Six JVM tests pass, including 180 randomized configurations compared with an
+  independent exhaustive rectangle oracle. Twenty-three distinct device tests
+  cover layout, editor focus/drafts, profiles, themes, input, mouse and clipboard.
+- Release acceptance on the API 35 emulator also covers a rectangular display,
+  the Pixel 6 punch hole and an actual simulated tall notch, in portrait and both
+  landscape rotations. Swiping to reveal transient system bars preserves terminal
+  bounds; IME/rotation resize the existing remote PTY without replacing its shell.
+- Reports, display geometry and screenshots are in
+  `artifacts/android/emulator-5554/edges/`. The universal ARM64/x86_64 release APK
+  builds and passes signature verification. Physical devices remain unverified.
+
 ## Practical limits
 
 - Phone/container-specific network enforcement, background survival, Android

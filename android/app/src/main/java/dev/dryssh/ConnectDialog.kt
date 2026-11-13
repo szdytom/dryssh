@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -122,7 +121,7 @@ fun ConnectDialog(session: SshService, dismiss: () -> Unit, connect: (Connection
 		.put("auto_reconnect", autoReconnect).put("wlan_only", wlanOnly)
 	val valid =
 		!busy && host.isNotBlank() && user.isNotBlank() && (port.toIntOrNull() ?: 0) in 1..65535
-	AlertDialog(onDismissRequest = dismiss, title = { Text("Connect to server") }, text = {
+	ScreenAlertDialog(onDismissRequest = dismiss, title = { Text("Connect to server") }, text = {
 		Column(
 			Modifier.verticalScroll(rememberScrollState()),
 			verticalArrangement = Arrangement.spacedBy(8.dp)

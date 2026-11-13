@@ -30,8 +30,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -61,10 +59,7 @@ fun EditorDialog(session: SshService, typeface: Typeface, dismiss: () -> Unit) {
 		if (session.pasteDraft(plain)) dismiss() else refused = true
 	}
 	val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
-	Dialog(
-		onDismissRequest = dismiss,
-		properties = DialogProperties(usePlatformDefaultWidth = false)
-	) {
+	ScreenDialog(onDismissRequest = dismiss) {
 		Surface(
 			modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
 				.widthIn(max = 640.dp).fillMaxWidth(),
@@ -79,7 +74,12 @@ fun EditorDialog(session: SshService, typeface: Typeface, dismiss: () -> Unit) {
 				AndroidView(
 					modifier = Modifier.weight(1f).fillMaxWidth().testTag("local-editor-input"),
 					factory = { context ->
-						EditText(context).apply {
+						object : EditText(context) {
+							override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+								super.onWindowFocusChanged(hasWindowFocus)
+								if (hasWindowFocus) requestFocus()
+							}
+						}.apply {
 							inputType =
 								InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
 							imeOptions =

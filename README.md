@@ -5,8 +5,13 @@ session and multiple saved connection profiles. The first daily-use feature set
 from `plan.md` is implemented; acceptance uses Android emulators as agreed with
 the user. See [verification and limits](docs/progress.md).
 
-The landscape layout puts controls in a **52 dp icon rail on the left** and gives
-the terminal the full available height. Icons have accessible names and long-press
+The app uses immersive edge-to-edge windows; swipe from an edge to temporarily
+reveal the system bars. Controls avoid the actual camera cutout, display corners
+(Android 12+) and keyboard instead of reserving a uniform border. Portrait controls
+use the space beside the camera, with overflow actions on narrow screens.
+Landscape controls use a **52 dp icon rail**, choosing the side that gives the
+terminal more usable area and expanding only when a cutout requires it. The
+terminal keeps a complete rectangular grid. Icons have accessible names and long-press
 tooltips. The plug opens connections, the pencil opens the local editor, the
 keyboard toggles the IME, and the lightning icon opens auxiliary keys/actions.
 The session menu contains status, screen-awake and disconnect controls.
@@ -80,7 +85,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 cd android
-./gradlew spotlessCheck :app:lintRelease
+./gradlew spotlessCheck :app:testDebugUnitTest :app:lintRelease
 ```
 
 For device acceptance, build both app/test APKs first and start the fixture:

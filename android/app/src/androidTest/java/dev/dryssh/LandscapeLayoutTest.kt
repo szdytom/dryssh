@@ -16,7 +16,7 @@ import org.junit.Test
 class LandscapeLayoutTest {
 	@get:Rule val compose = createEmptyComposeRule()
 
-	@Test fun landscapeUsesOneLeftRailAndPreservesTheWholeTerminalHeight() {
+	@Test fun landscapeUsesOneRailAndPreservesTheSafeTerminalArea() {
 		SessionFixture().use { fixture ->
 			fixture.connect()
 			val pid = fixture.shellPid("rail-before")
@@ -34,9 +34,9 @@ class LandscapeLayoutTest {
 				compose.waitForIdle()
 				val rail = compose.onNodeWithTag("landscape-controls").fetchSemanticsNode().boundsInRoot
 				val terminal = compose.onNodeWithTag("terminal").fetchSemanticsNode().boundsInRoot
-				assertTrue(rail.right <= terminal.left + 1f)
-				assertEquals(rail.top, terminal.top, 1f)
-				assertEquals(rail.bottom, terminal.bottom, 1f)
+				assertTrue(rail.right <= terminal.left + 1f || terminal.right <= rail.left + 1f)
+				assertTrue(terminal.top >= rail.top - 1f)
+				assertTrue(terminal.bottom <= rail.bottom + 1f)
 				assertTrue(rail.width < terminal.width / 8)
 				for (name in listOf(
 					"Connect",

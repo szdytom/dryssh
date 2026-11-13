@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -34,8 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -373,12 +369,9 @@ internal fun SettingsPanel(
 	dismissLabel: String = "Cancel",
 	content: @Composable ColumnScope.() -> Unit
 ) {
-	Dialog(
-		onDismissRequest = dismiss,
-		properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-	) {
+	ScreenDialog(onDismissRequest = dismiss) {
 		Surface(Modifier.fillMaxSize()) {
-			Column(Modifier.safeDrawingPadding().imePadding().padding(16.dp)) {
+			Column(Modifier.padding(16.dp)) {
 				Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 					Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
 					TextButton(onClick = dismiss) { Text(dismissLabel) }
