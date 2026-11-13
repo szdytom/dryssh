@@ -26,7 +26,9 @@ The selected theme survives app restarts, including themes with identical palett
 
 Direct Android IME composition stays local until commit. The native multiline
 editor keeps a local draft and uses negotiated bracketed paste without adding
-Enter. When that mode is off, multiline paste stays blocked until the user chooses
+Enter. Esc closes the editor and keeps the draft; Shift+Enter pastes, while Enter
+inserts a newline. The editor also uses the configured terminal font. When
+bracketed paste is off, multiline paste stays blocked until the user chooses
 an explicit plain-paste fallback. Long press opens local selection, clipboard and
 history actions; ordinary taps/scrolling follow remote mouse and screen modes.
 

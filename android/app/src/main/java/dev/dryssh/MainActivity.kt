@@ -455,7 +455,12 @@ private fun SessionScreen(
 		}, confirmButton = { TextButton(onClick = { showMenu = false }) { Text("Close") } })
 	}
 	if (showSettings) SettingsDialog(session.repository) { showSettings = false }
-	if (showEditor) EditorDialog(session) { showEditor = false }
+	if (showEditor) {
+		EditorDialog(session, fontResult.getOrDefault(Typeface.MONOSPACE)) {
+			showEditor =
+				false
+		}
+	}
 	if (showConnect) {
 		ConnectDialog(
 			session = session,
