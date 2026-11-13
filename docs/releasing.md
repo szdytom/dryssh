@@ -80,11 +80,35 @@ Build again without `dryssh.runner` to restore the ordinary instrumentation runn
 ## Publish
 
 Before each release, update the Rust workspace version and Android `versionName`
-together, increment Android `versionCode`, and add `docs/releases/VERSION.md`.
-The release script rejects differing Rust and Android version names.
+together, increment Android `versionCode`, and add `changelog.d/VERSION.md`.
+Use one Markdown file per version (for example, `changelog.d/0.2.0.md`), with the
+user-visible changes and compatibility notes for that version. Keep previous
+files as release history. This file becomes the GitHub Release body and is also
+included in the release ZIP.
 
 Run CI and device acceptance against the candidate. Review `SHA256SUMS` and the
 certificate fingerprint, and compare the fingerprint with the previous release.
-Create a version tag and a GitHub Release with the corresponding release notes.
-Attach the four public files listed above; exclude test APKs and signing material.
-The local release script does not create tags, push commits or publish releases.
+Commit and push the version changes, then publish a stable version tag:
+
+```sh
+git tag -a v0.2.0 -m 'Release 0.2.0'
+git push origin v0.2.0
+```
+
+The Release workflow runs on `v*` tag pushes. It rejects tags other than
+`vX.Y.Z`, mismatched Rust/Android versions, and missing or empty changelog files
+before building. It runs Rust and Android checks, tests APK signatures and tamper
+detection, then uses the existing release identity to build and verify both APKs.
+Only successful builds create a GitHub Release with these five assets: the two
+signed APKs, ZIP, `SIGNING-CERTIFICATE.txt`, and `SHA256SUMS`. Test APKs and signing
+material are excluded.
+
+Configure these repository Actions secrets before pushing a release tag:
+
+- `DRYSSH_SIGNING_P12_BASE64`: base64 encoding of `release.p12`.
+- `DRYSSH_SIGNING_JSON`: the complete contents of `signing.json`.
+
+The workflow restores them to a private temporary directory outside the checkout
+and removes it after signing, including on failure. It uses the built-in
+`GITHUB_TOKEN` with `contents: write` to publish. The local release script still
+does not create tags, push commits or publish releases.

@@ -21,7 +21,7 @@ No server-side helper is required.
 Requires **Android 11 (API 30) or later**, on ARM64 or x86_64.
 Download the signed APK from this repository's **Releases** page when available,
 verify it against `SHA256SUMS`, and open it with Android's package installer.
-The first public version is a preview; see [release notes](docs/releases/0.1.0.md).
+The first public version is a preview; see [release notes](changelog.d/0.1.0.md).
 
 The maintainer has tested basic functionality on an ARM64 physical device.
 Automated emulator acceptance covers SSH, input, terminal workflows and network

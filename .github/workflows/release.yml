@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Validate tag, versions and changelog
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version=$(python3 android/release.py --check-tag "$RELEASE_TAG")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Install pinned Android packages
+        run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'cmake;3.22.1' 'ndk;29.0.14206865'
+      - name: Check Rust formatting, lint and tests
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo test --workspace --locked
+      - name: Build release APKs and test APK
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/29.0.14206865
+        run: python3 android/build.py --release --test
+      - name: Check Android formatting, tests and lint
+        working-directory: android
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/29.0.14206865
+        run: ./gradlew --no-daemon spotlessCheck :app:testDebugUnitTest :app:lintRelease
+      - name: Test signing, tamper detection and packaging
+        env:
+          DRYSSH_TEST_APK: target/android/dryssh-arm64-v8a-release-unsigned.apk:target/android/dryssh-x86_64-release-unsigned.apk
+        run: python3 -m unittest discover -s android -p 'test_*.py' -v
+      - name: Build and verify signed release
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/29.0.14206865
+          DRYSSH_SIGNING_P12_BASE64: ${{ secrets.DRYSSH_SIGNING_P12_BASE64 }}
+          DRYSSH_SIGNING_JSON: ${{ secrets.DRYSSH_SIGNING_JSON }}
+        run: |
+          signing_dir=$(mktemp -d "$RUNNER_TEMP/dryssh-signing.XXXXXX")
+          trap 'rm -rf "$signing_dir"' EXIT
+          export SIGNING_DIR="$signing_dir"
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          directory = Path(os.environ["SIGNING_DIR"])
+          for name, contents in (
+              ("release.p12", base64.b64decode(os.environ["DRYSSH_SIGNING_P12_BASE64"], validate=True)),
+              ("signing.json", os.environ["DRYSSH_SIGNING_JSON"].encode()),
+          ):
+              with open(directory / name, "xb", opener=lambda p, f: os.open(p, f, 0o600)) as output:
+                  output.write(contents)
+          PY
+          unset DRYSSH_SIGNING_P12_BASE64 DRYSSH_SIGNING_JSON
+          python3 android/release.py --signing-dir "$signing_dir"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cd "target/android/release/$VERSION"
+          sha256sum --check SHA256SUMS
+          gh release create "$RELEASE_TAG" --verify-tag \
+            --title "DrySSH $VERSION" \
+            --notes-file "$GITHUB_WORKSPACE/changelog.d/$VERSION.md" \
+            "dryssh-$VERSION-arm64-v8a.apk" "dryssh-$VERSION-x86_64.apk" \
+            "dryssh-$VERSION.zip" SIGNING-CERTIFICATE.txt SHA256SUMS

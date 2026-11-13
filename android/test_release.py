@@ -7,8 +7,66 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 import release
+
+
+class ReleaseVersionTest(unittest.TestCase):
+    def test_tag_versions_and_notes_must_agree(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "android/app").mkdir(parents=True)
+            (root / "changelog.d").mkdir()
+            (root / "Cargo.toml").write_text('[workspace.package]\nversion = "1.2.3"\n')
+            gradle = root / "android/app/build.gradle.kts"
+            gradle.write_text('    versionName = "1.2.3"\n')
+            notes = root / "changelog.d/1.2.3.md"
+            notes.write_text("# DrySSH 1.2.3\n\n- Fix reconnect.\n")
+            with patch.object(release, "ROOT", root):
+                self.assertEqual(release.release_version("v1.2.3"), "1.2.3")
+                for tag in ("1.2.3", "v1.2.4", "v1.2.3-rc.1", "v1.2.3/../other"):
+                    with (
+                        self.subTest(tag=tag),
+                        self.assertRaisesRegex(ValueError, "tag"),
+                    ):
+                        release.release_version(tag)
+                gradle.write_text('    versionName = "1.2.4"\n')
+                with self.assertRaisesRegex(ValueError, "versions must match"):
+                    release.release_version("v1.2.3")
+                gradle.write_text('    versionName = "1.2.3"\n')
+                notes.write_text(" \n")
+                with self.assertRaisesRegex(ValueError, "Missing release notes"):
+                    release.release_version("v1.2.3")
+                notes.unlink()
+                with self.assertRaisesRegex(ValueError, "Missing release notes"):
+                    release.release_version("v1.2.3")
+                for version in ("1.2.3-rc.1", "01.2.3", "1.2"):
+                    (root / "Cargo.toml").write_text(
+                        f'[workspace.package]\nversion = "{version}"\n'
+                    )
+                    with (
+                        self.subTest(version=version),
+                        self.assertRaisesRegex(ValueError, "X.Y.Z"),
+                    ):
+                        release.release_version()
+
+    def test_tag_validation_needs_no_signing_key(self):
+        version = release.release_version()
+        result = subprocess.run(
+            [
+                "python3",
+                str(release.ROOT / "android/release.py"),
+                "--check-tag",
+                f"v{version}",
+                "--signing-dir",
+                "/nonexistent",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(result.stdout.strip(), version)
 
 
 class ReleaseTest(unittest.TestCase):
@@ -62,6 +120,10 @@ class ReleaseTest(unittest.TestCase):
             for apk in apks:
                 self.assertEqual(archive.read(apk.name), apk.read_bytes())
             self.assertIn("LICENSE", archive.namelist())
+            self.assertEqual(
+                archive.read("changelog.d/0.1.0.md"),
+                (release.ROOT / "changelog.d/0.1.0.md").read_bytes(),
+            )
             self.assertIn(
                 "android/terminal/src/main/cpp/libvterm/LICENSE", archive.namelist()
             )

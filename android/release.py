@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -89,7 +90,7 @@ def package(directory, apks, certificate, version):
     notices = [
         "LICENSE",
         "NOTICE.md",
-        f"docs/releases/{version}.md",
+        f"changelog.d/{version}.md",
         "docs/progress.md",
         "docs/publication-checks.md",
         "android/terminal/LICENSE",
@@ -117,12 +118,34 @@ def package(directory, apks, certificate, version):
     print(f"Release files: {directory}")
 
 
+def release_version(tag=None):
+    version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"][
+        "version"
+    ]
+    if not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version):
+        raise ValueError("Release version must use X.Y.Z")
+    if tag is not None and tag != f"v{version}":
+        raise ValueError("Release tag must be vX.Y.Z and match the workspace version")
+    gradle = (ROOT / "android/app/build.gradle.kts").read_text()
+    if not re.search(
+        rf'^\s*versionName = "{re.escape(version)}"\s*$', gradle, re.MULTILINE
+    ):
+        raise ValueError("Rust and Android versions must match")
+    notes = ROOT / f"changelog.d/{version}.md"
+    if not notes.is_file() or not notes.read_text().strip():
+        raise ValueError(f"Missing release notes: changelog.d/{version}.md")
+    return version
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--init",
         action="store_true",
         help="Create a new signing identity; never overwrite one",
+    )
+    parser.add_argument(
+        "--check-tag", help="Validate a release tag and print its version"
     )
     parser.add_argument("--signing-dir", type=Path, default=DEFAULT_SIGNING_DIR)
     parser.add_argument(
@@ -132,6 +155,12 @@ def main():
     )
     parser.add_argument("--gradle-arg", action="append", default=[])
     args = parser.parse_args()
+    if args.check_tag is not None:
+        try:
+            print(release_version(args.check_tag))
+        except ValueError as error:
+            parser.error(str(error))
+        return
     directory = args.signing_dir.expanduser().resolve()
     if directory.is_relative_to(ROOT):
         parser.error("Keep the signing directory outside the repository")
@@ -143,12 +172,10 @@ def main():
         or not (directory / "signing.json").is_file()
     ):
         parser.error("Signing identity missing; run with --init first")
-    version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"][
-        "version"
-    ]
-    gradle = (ROOT / "android/app/build.gradle.kts").read_text()
-    if f'versionName = "{version}"' not in gradle:
-        parser.error("Rust and Android versions must match")
+    try:
+        version = release_version()
+    except ValueError as error:
+        parser.error(str(error))
     command = [sys.executable, str(ROOT / "android/build.py"), "--release"]
     if args.test:
         command.append("--test")
