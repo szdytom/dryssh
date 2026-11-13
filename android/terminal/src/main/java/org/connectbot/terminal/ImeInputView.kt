@@ -23,8 +23,10 @@ import android.text.Editable
 import android.text.Selection
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.view.inputmethod.BaseInputConnection
+import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
@@ -72,7 +74,15 @@ internal class ImeInputView(
         }
     },
     private val onHideKeyboard: (View) -> Unit = { SoftwareKeyboardControllerCompat(it).hide() },
+    private val onUpdateCursorAnchorInfo: (View, CursorAnchorInfo) -> Unit =
+        { view, info -> inputMethodManager.updateCursorAnchorInfo(view, info) },
 ) : View(context) {
+
+    var cursorAnchor: (() -> CursorAnchorInfo.Builder?)? = null
+    private val cursorUpdateListener = ViewTreeObserver.OnPreDrawListener {
+        activeConnection?.reportCursorAnchor()
+        true
+    }
 
     init {
         isFocusable = true
@@ -128,6 +138,7 @@ internal class ImeInputView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        viewTreeObserver.addOnPreDrawListener(cursorUpdateListener)
         dispatchShowRequest()
     }
 
@@ -165,6 +176,7 @@ internal class ImeInputView(
 
     override fun onDetachedFromWindow() {
         hideIme()
+        viewTreeObserver.removeOnPreDrawListener(cursorUpdateListener)
         super.onDetachedFromWindow()
     }
 
@@ -304,6 +316,48 @@ internal class ImeInputView(
         private var shortcutSubmittedText: String? = null
         private var batchEditDepth: Int = 0
         private var selectionUpdatePending: Boolean = false
+        private var monitorCursor: Boolean = false
+        private var immediateCursorUpdate: Boolean = false
+        private var lastCursorAnchor: CursorAnchorInfo? = null
+
+        override fun requestCursorUpdates(cursorUpdateMode: Int): Boolean {
+            val supported = InputConnection.CURSOR_UPDATE_IMMEDIATE or
+                InputConnection.CURSOR_UPDATE_MONITOR or InputConnection.CURSOR_UPDATE_FILTER_INSERTION_MARKER
+            if (cursorUpdateMode and supported.inv() != 0) return false
+            monitorCursor = cursorUpdateMode and InputConnection.CURSOR_UPDATE_MONITOR != 0
+            immediateCursorUpdate = cursorUpdateMode and InputConnection.CURSOR_UPDATE_IMMEDIATE != 0
+            reportCursorAnchor()
+            return true
+        }
+
+        override fun requestCursorUpdates(cursorUpdateMode: Int, cursorUpdateFilter: Int): Boolean {
+            if (cursorUpdateFilter and InputConnection.CURSOR_UPDATE_FILTER_INSERTION_MARKER.inv() != 0) return false
+            return requestCursorUpdates(cursorUpdateMode or cursorUpdateFilter)
+        }
+
+        fun reportCursorAnchor() {
+            if (activeConnection !== this || (!monitorCursor && !immediateCursorUpdate)) return
+            val builder = cursorAnchor?.invoke() ?: return
+            editable?.let { buffer ->
+                builder.setSelectionRange(Selection.getSelectionStart(buffer), Selection.getSelectionEnd(buffer))
+                val start = BaseInputConnection.getComposingSpanStart(buffer)
+                val end = BaseInputConnection.getComposingSpanEnd(buffer)
+                if (start >= 0 && end >= start) builder.setComposingText(start, buffer.subSequence(start, end))
+            }
+            val info = builder.build()
+            if (immediateCursorUpdate || info != lastCursorAnchor) {
+                onUpdateCursorAnchorInfo(this@ImeInputView, info)
+                lastCursorAnchor = info
+            }
+            immediateCursorUpdate = false
+        }
+
+        override fun closeConnection() {
+            monitorCursor = false
+            immediateCursorUpdate = false
+            if (activeConnection === this) activeConnection = null
+            super.closeConnection()
+        }
 
         /**
          * Cookie from the last [InputConnection.GET_EXTRACTED_TEXT_MONITOR] request, or -1
@@ -775,6 +829,7 @@ internal class ImeInputView(
                 BaseInputConnection.getComposingSpanStart(buffer),
                 BaseInputConnection.getComposingSpanEnd(buffer),
             )
+            reportCursorAnchor()
             // Keep a monitoring IME's mirror current: it will not re-poll, so every edit
             // must be pushed. Plain text is enough — the IME only reads the characters.
             if (extractedTextToken >= 0) {

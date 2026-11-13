@@ -19,6 +19,7 @@ package org.connectbot.terminal
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
@@ -26,6 +27,7 @@ import android.icu.lang.UCharacter
 import android.icu.lang.UProperty
 import android.text.TextPaint
 import android.view.KeyEvent
+import android.view.inputmethod.CursorAnchorInfo
 import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.splineBasedDecay
@@ -98,6 +100,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -500,6 +504,7 @@ internal fun TerminalWithAccessibility(
 
     // Keep reference to ImeInputView for controlling IME
     var imeInputView by remember { mutableStateOf<ImeInputView?>(null) }
+    var terminalCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val currentInputView = imeInputView
     val imeVisible = WindowInsets.isImeVisible
     val currentVisibilityCallback by rememberUpdatedState(onImeVisibilityChanged)
@@ -1653,7 +1658,8 @@ internal fun TerminalWithAccessibility(
                         scaleX = zoomScale
                         scaleY = zoomScale
                         transformOrigin = zoomOrigin
-                    },
+                    }
+                    .onGloballyPositioned { terminalCoordinates = it },
             ) {
                 Box(
                     Modifier.fillMaxSize().drawWithContent {
@@ -1992,6 +1998,35 @@ internal fun TerminalWithAccessibility(
                 },
                 update = { view ->
                     view.onPasteRequest = onPasteRequest
+                    view.cursorAnchor = anchor@{
+                        val coordinates = terminalCoordinates?.takeIf { it.isAttached } ?: return@anchor null
+                        val snapshot = screenState.snapshot
+                        val row = snapshot.cursorRow.coerceIn(0, snapshot.rows - 1)
+                        val col = cursorLeadColumn(screenState.getVisibleLine(row), snapshot.cursorCol.coerceIn(0, snapshot.cols - 1))
+                        val x = textPaint.visualColumn(screenState, row, col, baseCharWidth) * baseCharWidth
+                        val y = row * baseCharHeight
+                        val origin = coordinates.localToScreen(Offset.Zero)
+                        val horizontal = coordinates.localToScreen(Offset(1f, 0f))
+                        val vertical = coordinates.localToScreen(Offset(0f, 1f))
+                        val matrix = Matrix().apply {
+                            setPolyToPoly(
+                                floatArrayOf(0f, 0f, 1f, 0f, 0f, 1f),
+                                0,
+                                floatArrayOf(origin.x, origin.y, horizontal.x, horizontal.y, vertical.x, vertical.y),
+                                0,
+                                3,
+                            )
+                        }
+                        CursorAnchorInfo.Builder()
+                            .setMatrix(matrix)
+                            .setInsertionMarkerLocation(
+                                x,
+                                y,
+                                y + baseCharBaseline,
+                                y + baseCharHeight,
+                                if (screenState.scrollbackPosition == 0) CursorAnchorInfo.FLAG_HAS_VISIBLE_REGION else CursorAnchorInfo.FLAG_HAS_INVISIBLE_REGION,
+                            )
+                    }
                 },
                 modifier = Modifier
                     .size(1.dp)

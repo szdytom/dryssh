@@ -19,6 +19,12 @@ The Apache-2.0 license is in `LICENSE`; libvterm retains its own MIT license.
   input connection through OpenSSH, including composition replacement, consecutive
   speech commits, deletion, finish and a following Ctrl shortcut.
 
+- `Terminal.kt` / `ImeInputView.kt`: report the rendered terminal cursor through
+  Android cursor-anchor updates, including the screen transform, font metrics,
+  selection and composing text. Candidate windows track the terminal instead of
+  the hidden editor. Regression: `ImeCursorPositionTest` checks cursor movement,
+  composition, layout offsets, font changes and immediate/monitor requests.
+
 - `keyboard.c` / `vterm.h`, terminal JNI and emulator API: expose the kernel's
   bracketed-paste flag and an atomic guarded paste. A rejected guarded paste
   emits no bytes. Regression: `TerminalIntegrationTest` covers split negotiation,
