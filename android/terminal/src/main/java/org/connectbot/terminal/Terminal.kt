@@ -109,6 +109,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -509,6 +510,7 @@ internal fun TerminalWithAccessibility(
     val imeVisible = WindowInsets.isImeVisible
     val currentVisibilityCallback by rememberUpdatedState(onImeVisibilityChanged)
     val currentShouldShowIme by rememberUpdatedState(shouldShowIme)
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
     var restoreAfterReview by remember { mutableStateOf(false) }
     var reviewExitedByKey by remember { mutableStateOf(false) }
     SideEffect {
@@ -516,6 +518,11 @@ internal fun TerminalWithAccessibility(
         currentInputView?.observeImeVisibility(imeVisible)
     }
     LaunchedEffect(imeVisible) { currentVisibilityCallback(imeVisible) }
+
+    // Hardware input needs focus even when the soft keyboard is hidden.
+    LaunchedEffect(currentInputView, shouldShowIme, windowFocused, isReviewMode) {
+        if (keyboardEnabled && windowFocused && !isReviewMode) currentInputView?.requestFocus()
+    }
 
     // Cleanup IME when component is disposed
     DisposableEffect(currentInputView) {
@@ -1625,9 +1632,10 @@ internal fun TerminalWithAccessibility(
                                         // User tapped on a hyperlink
                                         currentOnHyperlinkClick(hyperlinkUrl)
                                     } else {
-                                        // Request focus when terminal is tapped to show keyboard
+                                        // Both Compose and the Android input view need focus.
                                         if (currentKeyboardEnabled) {
                                             focusRequester.requestFocus()
+                                            imeInputView?.requestFocus()
                                             if (currentShouldShowIme) imeInputView?.showIme()
                                         }
                                         currentOnTerminalTap()
@@ -2030,8 +2038,8 @@ internal fun TerminalWithAccessibility(
                 },
                 modifier = Modifier
                     .size(1.dp)
-                    .focusable()
-                    .focusRequester(focusRequester),
+                    .focusRequester(focusRequester)
+                    .focusable(),
             )
         }
     }
