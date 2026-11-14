@@ -200,9 +200,11 @@ class SshService : Service() {
 		val text = draft.value
 		if (state.value.state != "connected" || text.isEmpty()) return false
 		if (!plain && text.any { it == '\n' || it == '\r' }) {
-			return terminal.pasteTextIfBracketed(text)
+			if (!terminal.pasteTextIfBracketed(text)) return false
+		} else {
+			terminal.pasteText(text)
 		}
-		terminal.pasteText(text)
+		updateDraft("")
 		return true
 	}
 

@@ -37,7 +37,8 @@ credentials; retain your original private keys.
 Open the plug icon to save a connection and connect. Verify a new server's
 fingerprint through a trusted channel before accepting it. The pencil opens the
 local editor; Ctrl+Shift+E is its default shortcut. Enter inserts a newline and
-Shift+Enter pastes without sending a trailing Enter. Esc keeps the draft.
+Shift+Enter pastes without sending a trailing Enter. Successful pastes clear the
+draft; Keep draft or Esc preserves it for next time.
 
 The keyboard icon toggles the IME; the lightning icon opens auxiliary keys/actions.
 Settings contains themes, fonts, shortcuts and quick actions. The session menu

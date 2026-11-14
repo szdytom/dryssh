@@ -25,6 +25,7 @@ import java.io.File
 import org.connectbot.terminal.VTermKey
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -63,6 +64,16 @@ class EditorIntegrationTest {
 			)
 		}
 		compose.waitForIdle()
+	}
+
+	private fun assertDraftCleared(fixture: SessionFixture) {
+		compose.onNodeWithText("Local editor").assertDoesNotExist()
+		assertEquals("", fixture.service.draft.value)
+		compose.onNodeWithContentDescription("Editor").performClick()
+		compose.onNodeWithText("Local editor").assertIsDisplayed()
+		fixture.instrumentation.runOnMainSync { assertEquals("", editor().text.toString()) }
+		compose.onNodeWithText("Paste").assertIsNotEnabled()
+		compose.onNodeWithText("Keep draft").performClick()
 	}
 
 	private fun command(fixture: SessionFixture, text: String) {
@@ -115,26 +126,34 @@ class EditorIntegrationTest {
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
 			instrumentation.runOnMainSync { assertEquals("$draft\n", editor().text.toString()) }
 			compose.onNodeWithText("Keep draft").performClick()
+			compose.onNodeWithContentDescription("Editor").performClick()
+			compose.onNodeWithText("Local editor").assertIsDisplayed()
+			instrumentation.runOnMainSync { assertEquals("$draft\n", editor().text.toString()) }
+			compose.onNodeWithText("Keep draft").performClick()
 		}
 	}
 
 	@Test(timeout = 60_000)
-	fun shiftEnterPastesSingleLineWithoutExecutingIt() {
+	fun pasteAndShiftEnterClearDraftWithoutExecutingIt() {
 		SessionFixture().use { fixture ->
 			fixture.connect()
 			fixture.shellPid("editor-shortcut-ready")
-			val url = "https://example.org/editor-shortcut-${System.nanoTime()}"
-			val draft = "printf '%s%s\\n' 'https://example.' '${url.substringAfter("https://example.")}'"
-			compose.onNodeWithContentDescription("Editor").performClick()
-			compose.onNodeWithText("Local editor").assertIsDisplayed()
-			fixture.instrumentation.runOnMainSync { editor().setText(draft) }
-			compose.onNodeWithText("Paste").assertIsEnabled()
-			shiftEnter()
-			compose.onNodeWithText("Local editor").assertDoesNotExist()
-			Thread.sleep(250)
-			assertTrue(fixture.service.terminal.getUrls().none { it.url == url })
-			fixture.instrumentation.runOnMainSync { fixture.service.terminal.dispatchKey(0, VTermKey.ENTER) }
-			fixture.awaitCondition { fixture.service.terminal.getUrls().any { it.url == url } }
+			for (shortcut in listOf(false, true)) {
+				val url = "https://example.org/editor-shortcut-${System.nanoTime()}"
+				val draft = "printf '%s%s\\n' 'https://example.' '${url.substringAfter("https://example.")}'"
+				compose.onNodeWithContentDescription("Editor").performClick()
+				compose.onNodeWithText("Local editor").assertIsDisplayed()
+				fixture.instrumentation.runOnMainSync { editor().setText(draft) }
+				compose.onNodeWithText("Paste").assertIsEnabled()
+				if (shortcut) shiftEnter() else compose.onNodeWithText("Paste").performClick()
+				assertDraftCleared(fixture)
+				Thread.sleep(250)
+				assertTrue(fixture.service.terminal.getUrls().none { it.url == url })
+				fixture.instrumentation.runOnMainSync {
+					fixture.service.terminal.dispatchKey(0, VTermKey.ENTER)
+				}
+				fixture.awaitCondition { fixture.service.terminal.getUrls().any { it.url == url } }
+			}
 		}
 	}
 
@@ -215,6 +234,7 @@ class EditorIntegrationTest {
 			compose.onNodeWithText("Plain paste").assertIsDisplayed()
 			shiftEnter()
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
+			fixture.instrumentation.runOnMainSync { assertFalse(fixture.service.pasteDraft()) }
 			assertEquals(draft, fixture.service.draft.value)
 			assertTrue(
 				fixture.service.terminal.getUrls().none {
@@ -228,6 +248,7 @@ class EditorIntegrationTest {
 			compose.onNodeWithText("Local editor").assertIsDisplayed()
 			fixture.instrumentation.runOnMainSync { assertEquals(draft, editor().text.toString()) }
 			compose.onNodeWithText("Plain paste").performClick()
+			assertDraftCleared(fixture)
 			fixture.awaitCondition {
 				fixture.service.terminal.getUrls().any {
 					it.url ==
@@ -274,7 +295,7 @@ class EditorIntegrationTest {
 			fixture.instrumentation.runOnMainSync { editor().setText(draft) }
 			compose.onNodeWithText("Paste").assertIsEnabled()
 			shiftEnter()
-			compose.onNodeWithText("Local editor").assertDoesNotExist()
+			assertDraftCleared(fixture)
 			compose.onNodeWithContentDescription("Keyboard").performClick()
 			compose.onNodeWithText("Esc").performClick()
 			keys(fixture, ":wq")
