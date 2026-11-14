@@ -229,6 +229,7 @@ private fun SessionScreen(
 			keyboardEnabled = true,
 			showSoftKeyboard = keyboard,
 			initialFontSize = settings.getDouble("font_size").toFloat().sp,
+			contentInsetPx = settings.getInt("terminal_inset"),
 			typeface = fontResult.getOrDefault(Typeface.MONOSPACE),
 			maxFontSize = 40.sp,
 			backgroundColor = Color(settings.getLong("background").toInt()),

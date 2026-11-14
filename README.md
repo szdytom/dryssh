@@ -41,9 +41,10 @@ Shift+Enter pastes without sending a trailing Enter. Successful pastes clear the
 draft; Keep draft or Esc preserves it for next time.
 
 The keyboard icon toggles the IME; the lightning icon opens auxiliary keys/actions.
-Settings contains themes, fonts, shortcuts and quick actions. The session menu
-contains screen-awake and disconnect controls. Swipe from a screen edge to reveal
-Android's system bars temporarily.
+Settings contains themes, fonts, shortcuts and quick actions. Appearance also lets
+you adjust the terminal inset (4 physical pixels on each edge by default; 0 removes
+it). The session menu contains screen-awake and disconnect controls. Swipe from a
+screen edge to reveal Android's system bars temporarily.
 
 ## Build from source
 

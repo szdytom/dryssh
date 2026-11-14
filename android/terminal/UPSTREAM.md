@@ -11,6 +11,12 @@ The Apache-2.0 license is in `LICENSE`; libvterm retains its own MIT license.
 
 ## Local patches
 
+- `Terminal.kt`: inset terminal content by a configurable number of physical
+  pixels (default 4) and fill the margins with the terminal background. Grid
+  sizing, pointer input, selection and IME anchors share the inset content bounds.
+  Regression: `TerminalInsetTest` covers pixel margins, grid dimensions, pointer
+  coordinates and live inset changes; `ImeCursorPositionTest` covers IME anchors.
+
 - `Terminal.kt`: acquire input focus independently of soft-keyboard visibility
   and restore it when the terminal window becomes active, except in accessibility
   review mode. Attach the focus requester before its focus target. Regression:

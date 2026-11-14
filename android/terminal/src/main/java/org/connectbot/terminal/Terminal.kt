@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
@@ -289,6 +290,7 @@ private const val DOUBLE_UNDERLINE_SPACING = 2f
  *
  * @param terminalEmulator The terminal emulator containing terminal state
  * @param modifier Modifier for the composable
+ * @param contentInsetPx Space around the terminal content on every edge, in physical pixels.
  * @param typeface Typeface for terminal text (default: Typeface.MONOSPACE)
  * @param initialFontSize Initial font size for terminal text (can be changed with pinch-to-zoom)
  * @param minFontSize Minimum font size for pinch-to-zoom
@@ -352,15 +354,19 @@ fun Terminal(
     onInterceptKey: ((ComposeKeyEvent) -> Boolean)? = null,
     resizeSuspended: Boolean = false,
     onPageGesture: ((Int) -> Unit)? = null,
+    contentInsetPx: Int = 4,
 ) {
+    val contentModifier = modifier
+        .background(backgroundColor)
+        .padding(with(LocalDensity.current) { contentInsetPx.toDp() })
     if (LocalInspectionMode.current) {
-        TerminalPreview(modifier, backgroundColor, foregroundColor)
+        TerminalPreview(contentModifier, backgroundColor, foregroundColor)
         return
     }
 
     TerminalWithAccessibility(
         terminalEmulator = terminalEmulator,
-        modifier = modifier,
+        modifier = contentModifier,
         typeface = typeface,
         initialFontSize = initialFontSize,
         minFontSize = minFontSize,

@@ -71,6 +71,7 @@ pub struct Settings {
 	pub ansi: [u32; 16],
 	pub font_ref: Option<String>,
 	pub font_size: f32,
+	pub terminal_inset: u16,
 	pub bindings: Vec<Binding>,
 	pub quick_actions: Vec<QuickAction>,
 }
@@ -88,6 +89,7 @@ impl Default for Settings {
 			],
 			font_ref: None,
 			font_size: 14.0,
+			terminal_inset: 4,
 			bindings: vec![Binding {
 				key: "e".into(),
 				modifiers: Modifiers {
@@ -205,6 +207,9 @@ impl Configuration {
 		if !(6.0..=40.0).contains(&settings.font_size) {
 			return Err("Font size must be between 6 and 40");
 		}
+		if settings.terminal_inset > 64 {
+			return Err("Terminal inset must be between 0 and 64 pixels");
+		}
 		if settings
 			.font_ref
 			.as_deref()
@@ -279,6 +284,19 @@ mod tests {
 	}
 
 	#[test]
+	fn legacy_settings_default_to_four_pixel_terminal_insets() {
+		for json in ["{}", r#"{"settings":{"font_size":18.0}}"#] {
+			let config: Configuration = serde_json::from_str(json).unwrap();
+			assert_eq!(config.settings.terminal_inset, 4);
+			config.validate().unwrap();
+		}
+		for inset in ["-1", "1.5", "65536"] {
+			let json = format!(r#"{{"settings":{{"terminal_inset":{inset}}}}}"#);
+			assert!(serde_json::from_str::<Configuration>(&json).is_err());
+		}
+	}
+
+	#[test]
 	fn rejects_duplicate_shortcuts_and_invalid_font_sizes() {
 		let mut config = Configuration::default();
 		config
@@ -292,6 +310,16 @@ mod tests {
 	}
 
 	proptest! {
+		#[test]
+		fn terminal_insets_roundtrip_and_validate(inset in prop_oneof![0u16..=65, any::<u16>()]) {
+			let mut config = Configuration::default();
+			config.settings.terminal_inset = inset;
+			let json = serde_json::to_string(&config).unwrap();
+			let restored: Configuration = serde_json::from_str(&json).unwrap();
+			prop_assert_eq!(restored.settings.terminal_inset, inset);
+			prop_assert_eq!(restored.validate().is_ok(), inset <= 64);
+		}
+
 		#[test]
 		fn complete_argb_palette_roundtrips(colors in any::<[u32; 16]>()) {
 			let mut config = Configuration::default();

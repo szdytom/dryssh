@@ -52,6 +52,7 @@ class ImeCursorPositionTest {
 				val padding = mutableStateOf(24)
 				val fontSize = mutableStateOf(14)
 				val scale = mutableStateOf(1f)
+				val inset = mutableStateOf(4)
 				activity.onActivity {
 					it.setContent {
 						Box(
@@ -65,7 +66,8 @@ class ImeCursorPositionTest {
 								terminal,
 								initialFontSize = fontSize.value.sp,
 								keyboardEnabled = true,
-								showSoftKeyboard = false
+								showSoftKeyboard = false,
+								contentInsetPx = inset.value
 							)
 						}
 					}
@@ -119,6 +121,11 @@ class ImeCursorPositionTest {
 					info.matrix.mapPoints(origin)
 					assertEquals(location[0].toFloat(), origin[0], 1f)
 					assertEquals(location[1].toFloat(), origin[1], 1f)
+					assertEquals(
+						padding.value * editor.resources.displayMetrics.density + inset.value * scale.value,
+						origin[0],
+						1f
+					)
 					val unit = floatArrayOf(1f, 1f)
 					info.matrix.mapPoints(unit)
 					assertEquals(scale.value, unit[0] - origin[0], 0.01f)
@@ -143,6 +150,7 @@ class ImeCursorPositionTest {
 					padding.value = 52
 					fontSize.value = 20
 					scale.value = 1.25f
+					inset.value = 16
 				}
 				compose.waitForIdle()
 				verify(1, 3)

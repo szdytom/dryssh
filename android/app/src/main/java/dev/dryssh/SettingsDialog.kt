@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import java.io.File
 import java.util.UUID
@@ -140,6 +141,14 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 							valueRange =
 							6f..40f,
 							steps = 33
+						)
+						Text("Terminal inset: ${current.getInt("terminal_inset")} px")
+						Slider(
+							current.getInt("terminal_inset").toFloat(),
+							{ inset -> change { it.put("terminal_inset", inset.toInt()) } },
+							modifier = Modifier.testTag("terminal-inset-slider"),
+							valueRange = 0f..64f,
+							steps = 63
 						)
 						TextButton(onClick = { importFont.launch("*/*") }, enabled = !busy) { Text("Import font") }
 						Text(if (current.isNull("font_ref")) "System monospace" else "Imported font")
