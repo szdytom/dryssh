@@ -28,6 +28,11 @@ object TerminalIcons {
 		)
 	val Actions = icon("Actions", "M13 2L4 14H11L10 22L20 9H13Z")
 	val Settings = icon("Settings", "M4 6H20 M4 12H20 M4 18H20 M8 3V9 M16 9V15 M10 15V21")
+	val Microphone =
+		icon(
+			"Microphone",
+			"M9 5A3 3 0 0 1 15 5V11A3 3 0 0 1 9 11Z M5 10V11A7 7 0 0 0 19 11V10 M12 18V22 M8 22H16"
+		)
 	val More = icon("More", "M11 4H13V6H11Z M11 11H13V13H11Z M11 18H13V20H11Z")
 	val Disconnect =
 		icon(

@@ -72,6 +72,8 @@ pub struct Settings {
 	pub font_ref: Option<String>,
 	pub font_size: f32,
 	pub terminal_inset: u16,
+	pub speech_api_key_ref: Option<String>,
+	pub speech_resource_id: String,
 	pub bindings: Vec<Binding>,
 	pub quick_actions: Vec<QuickAction>,
 }
@@ -90,6 +92,8 @@ impl Default for Settings {
 			font_ref: None,
 			font_size: 14.0,
 			terminal_inset: 4,
+			speech_api_key_ref: None,
+			speech_resource_id: "volc.seedasr.sauc.duration".into(),
 			bindings: vec![Binding {
 				key: "e".into(),
 				modifiers: Modifiers {
@@ -218,6 +222,22 @@ impl Configuration {
 			return Err("Invalid font reference");
 		}
 		let mut shortcuts = HashSet::new();
+		if !matches!(
+			settings.speech_resource_id.as_str(),
+			"volc.seedasr.sauc.duration"
+				| "volc.seedasr.sauc.concurrent"
+				| "volc.bigasr.sauc.duration"
+				| "volc.bigasr.sauc.concurrent"
+		) {
+			return Err("Invalid speech recognition resource");
+		}
+		if settings
+			.speech_api_key_ref
+			.as_deref()
+			.is_some_and(|r| !valid_reference(r))
+		{
+			return Err("Invalid speech credential reference");
+		}
 		for binding in &settings.bindings {
 			if !valid_key(&binding.key) || !binding.action.valid() {
 				return Err("Invalid keyboard mapping");
@@ -241,6 +261,51 @@ impl Configuration {
 mod tests {
 	use super::*;
 	use proptest::prelude::*;
+
+	#[test]
+	fn speech_defaults_to_disabled_and_accepts_only_credential_references() {
+		let mut config: Configuration = serde_json::from_str("{}").unwrap();
+		assert!(config.settings.speech_api_key_ref.is_none());
+		for reference in ["", "../key", "has space", "键"] {
+			config.settings.speech_api_key_ref = Some(reference.into());
+			assert!(config.validate().is_err());
+		}
+		config.settings.speech_api_key_ref = Some("speech-key_1".into());
+		config.validate().unwrap();
+		let restored: Configuration =
+			serde_json::from_str(&serde_json::to_string(&config).unwrap()).unwrap();
+		assert_eq!(
+			restored.settings.speech_api_key_ref.as_deref(),
+			Some("speech-key_1")
+		);
+		assert!(
+			serde_json::from_str::<Configuration>(r#"{"settings":{"speech_api_key":"secret"}}"#)
+				.is_err()
+		);
+	}
+
+	#[test]
+	fn speech_resources_default_to_existing_model_and_validate() {
+		let mut config: Configuration = serde_json::from_str("{}").unwrap();
+		assert_eq!(
+			config.settings.speech_resource_id,
+			"volc.seedasr.sauc.duration"
+		);
+		for resource in [
+			"volc.seedasr.sauc.duration",
+			"volc.seedasr.sauc.concurrent",
+			"volc.bigasr.sauc.duration",
+			"volc.bigasr.sauc.concurrent",
+		] {
+			config.settings.speech_resource_id = resource.into();
+			config.validate().unwrap();
+			let restored: Configuration =
+				serde_json::from_str(&serde_json::to_string(&config).unwrap()).unwrap();
+			assert_eq!(restored.settings.speech_resource_id, resource);
+		}
+		config.settings.speech_resource_id = "invalid".into();
+		assert!(config.validate().is_err());
+	}
 
 	#[test]
 	fn defaults_validate_and_unknown_secret_fields_are_rejected() {

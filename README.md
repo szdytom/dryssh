@@ -40,6 +40,26 @@ local editor; Ctrl+Shift+E is its default shortcut. Enter inserts a newline and
 Shift+Enter pastes without sending a trailing Enter. Successful pastes clear the
 draft; Keep draft or Esc preserves it for next time.
 
+For voice input, save a Volcengine speech API key in **Settings → Voice** (Doubao
+streaming speech recognition). The saved key reopens masked, with an explicit
+saved/enabled status. Select the model (1.0 or 2.0) and billing resource (hourly or
+concurrent) enabled in your Speech console. **Test API key** checks the selected
+resource's WebSocket authentication without recording audio; this does not save
+pending settings. HTTP errors include the selected model and the service's reason.
+In the local editor, click the
+microphone to start and click again to stop, or hold either Alt key to talk and
+release it to finish. Grant microphone access when prompted. Audio streams directly
+to Volcengine; two-pass recognition corrects the live text before completion.
+The key is encrypted with Android Keystore. **Disable voice input** removes it
+when settings are saved. Tapping the text field stops recording and waits for the
+final correction. Keep draft, Paste, Clear draft and closing the editor also wait
+for that correction before performing their action. Typing manually or moving
+the app to the background cancels recognition and keeps the text already received.
+
+The integration follows the [Volcengine streaming ASR protocol](https://docs.volcengine.com/docs/doubao-voice/bidirectional-streaming-automatic-speech-recognition-websocket?lang=en),
+with lifecycle and final-result handling informed by
+[说点啥 / BiBi Keyboard](https://github.com/BryceWG/BiBi-Keyboard/blob/main/app/src/main/java/com/brycewg/asrkb/asr/VolcStreamAsrEngine.kt).
+
 The keyboard icon toggles the IME; the lightning icon opens auxiliary keys/actions.
 Settings contains themes, fonts, shortcuts and quick actions. Appearance also lets
 you adjust the terminal inset (4 physical pixels on each edge by default; 0 removes

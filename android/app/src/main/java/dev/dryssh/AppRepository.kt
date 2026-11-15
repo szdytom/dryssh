@@ -37,6 +37,34 @@ class AppRepository(
 	val config = mutableConfig.asStateFlow()
 	val fonts = File(context.noBackupFilesDir, "fonts").apply { mkdirs() }
 
+	@Synchronized fun saveSettings(settings: JSONObject, speechApiKey: String? = null) {
+		val config = JSONObject(this.config.value)
+		val old = config.getJSONObject("settings").run {
+			if (isNull("speech_api_key_ref")) "" else getString("speech_api_key_ref")
+		}
+		val reference = when {
+			speechApiKey == null -> old
+			speechApiKey.isBlank() -> ""
+			else -> UUID.randomUUID().toString()
+		}
+		if (speechApiKey != null && reference.isNotEmpty()) {
+			credentials.put(reference, speechApiKey.trim().toByteArray(Charsets.UTF_8))
+		}
+		try {
+			settings.put("speech_api_key_ref", if (reference.isEmpty()) JSONObject.NULL else reference)
+			update(config.put("settings", settings))
+		} catch (error: Exception) {
+			if (reference.isNotEmpty() && reference != old) credentials.delete(reference)
+			throw error
+		}
+		if (old.isNotEmpty() && old != reference) credentials.delete(old)
+	}
+
+	@Synchronized fun speechApiKey(): String {
+		val reference = JSONObject(config.value).getJSONObject("settings").getString("speech_api_key_ref")
+		return credentials.read(reference).toString(Charsets.UTF_8)
+	}
+
 	@Synchronized fun update(config: JSONObject) {
 		check(loadError == null) { loadError!! }
 		val normalized = NativeBridge.normalizeConfig(config.toString())

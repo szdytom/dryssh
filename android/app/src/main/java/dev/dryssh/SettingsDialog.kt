@@ -3,6 +3,7 @@ package dev.dryssh
 import android.graphics.Typeface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -21,20 +25,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,10 +65,30 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 	val theme = TerminalTheme.selected(themes, current)
 	var showThemes by remember { mutableStateOf(false) }
 	var page by remember { mutableStateOf("Appearance") }
+	var speechKey by remember { mutableStateOf("") }
+	var speechKeyChanged by remember { mutableStateOf(false) }
+	val hadSpeechKey = remember { !current.isNull("speech_api_key_ref") }
+	var speechKeyLoading by remember { mutableStateOf(hadSpeechKey) }
+	var speechKeySaved by remember { mutableStateOf(false) }
+	var connectionStatus by remember { mutableStateOf<String?>(null) }
 	var error by remember { mutableStateOf<String?>(null) }
 	var busy by remember { mutableStateOf(false) }
 	var edit by remember { mutableStateOf<Pair<String, Int>?>(null) }
 	val imported = remember { mutableStateListOf<File>() }
+	LaunchedEffect(repository) {
+		if (hadSpeechKey) {
+			try {
+				speechKey = withContext(Dispatchers.IO) { repository.speechApiKey() }
+				speechKeySaved = true
+			} catch (cancelled: CancellationException) {
+				throw cancelled
+			} catch (_: Exception) {
+				error = "Cannot read the saved API key. Enter a replacement or disable voice input."
+			} finally {
+				speechKeyLoading = false
+			}
+		}
+	}
 	fun change(update: (JSONObject) -> Unit) {
 		settings = JSONObject(settings).also(update).toString()
 	}
@@ -97,13 +127,13 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 		"Settings",
 		dismiss,
 		"Save settings",
-		!busy,
+		!busy && !speechKeyLoading,
 		save = {
 			busy = true
 			scope.launch {
 				try {
 					withContext(Dispatchers.IO) {
-						repository.update(JSONObject(repository.config.value).put("settings", JSONObject(settings)))
+						repository.saveSettings(JSONObject(settings), if (speechKeyChanged) speechKey else null)
 					}
 					dismiss()
 				} catch (failure: Exception) {
@@ -115,8 +145,8 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 		}
 	) {
 		Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-			Row {
-				listOf("Appearance", "Keys", "Actions").forEach { title ->
+			Row(Modifier.horizontalScroll(rememberScrollState())) {
+				listOf("Appearance", "Keys", "Actions", "Voice").forEach { title ->
 					TextButton(onClick = {
 						focus.clearFocus()
 						keyboard?.hide()
@@ -129,6 +159,83 @@ fun SettingsDialog(repository: AppRepository, dismiss: () -> Unit) {
 				verticalArrangement = Arrangement.spacedBy(8.dp)
 			) {
 				when (page) {
+					"Voice" -> {
+						Text("Doubao streaming speech recognition")
+						Text("Audio is sent to Volcengine while recording. Two-pass recognition is enabled.")
+						OutlinedTextField(
+							speechKey,
+							{
+								speechKey = it
+								speechKeyChanged = true
+								connectionStatus = null
+							},
+							label = { Text("Volcengine API key") },
+							visualTransformation = PasswordVisualTransformation(),
+							keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+							enabled = !busy && !speechKeyLoading,
+							singleLine = true,
+							modifier = Modifier.fillMaxWidth()
+						)
+						Text(
+							when {
+								speechKeyLoading -> "Loading saved API key…"
+								speechKeyChanged && speechKey.isBlank() -> "Voice input will be disabled after saving."
+								speechKeyChanged -> "API key not saved yet. Save settings to apply."
+								speechKeySaved -> "API key saved. Voice input enabled."
+								hadSpeechKey -> "Saved API key unavailable. Enter a replacement."
+								else -> "No API key saved. Voice input disabled."
+							}
+						)
+						Text(
+							"Get the key from API Key management in the Volcengine Speech console. Select the model and billing type enabled there."
+						)
+						SpeechResource.entries.forEach { resource ->
+							val selected = current.getString("speech_resource_id") == resource.id
+							Row(
+								Modifier.fillMaxWidth().selectable(
+									selected,
+									enabled = !busy,
+									role = Role.RadioButton,
+									onClick = {
+										change { it.put("speech_resource_id", resource.id) }
+										connectionStatus = null
+									}
+								),
+								verticalAlignment = Alignment.CenterVertically
+							) {
+								RadioButton(selected = selected, onClick = null, enabled = !busy)
+								Text(resource.label)
+							}
+						}
+						TextButton(onClick = {
+							busy = true
+							connectionStatus = "Checking API key and selected resource…"
+							scope.launch {
+								try {
+									DoubaoSpeechEngine(
+										resource = SpeechResource.fromId(current.getString("speech_resource_id"))
+									)
+										.checkConnection(speechKey.trim())
+									connectionStatus = "Connection accepted for this resource. No audio was recorded."
+								} catch (cancelled: CancellationException) {
+									throw cancelled
+								} catch (failure: Exception) {
+									connectionStatus = failure.message ?: "Connection check failed."
+								} finally {
+									busy = false
+								}
+							}
+						}, enabled = !busy && !speechKeyLoading && speechKey.isNotBlank()) { Text("Test API key") }
+						connectionStatus?.let { Text(it) }
+						Text(
+							"Save an API key to enable the microphone in the local editor. Click to start/stop, or hold Alt to talk."
+						)
+						TextButton(onClick = {
+							speechKey = ""
+							speechKeyChanged = true
+							connectionStatus = null
+						}, enabled = !busy && !speechKeyLoading) { Text("Disable voice input") }
+					}
 					"Appearance" -> {
 						TextButton(onClick = { showThemes = true }) { Text("Theme: ${theme.name}") }
 						ThemePreview(theme)
